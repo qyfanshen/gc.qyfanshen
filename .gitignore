@@ -46,3 +46,4 @@ install.php
 *.mp3
 *.zip
 *.rar
+*.bak*
