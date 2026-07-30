@@ -32,3 +32,17 @@ cache/
 *.key
 config.php
 database.php
+install.php
+
+# 大文件
+*.dwg
+*.dxf
+*.pptx
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.mp4
+*.mp3
+*.zip
+*.rar
