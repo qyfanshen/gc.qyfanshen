@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智慧造价 · AI 工程造价智能管理平台</title>
+<!-- Vue 3 -->
+<script src="https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js"></script>
+<!-- Element Plus -->
+<link rel="stylesheet" href="https://unpkg.com/element-plus@2.7.5/dist/index.css">
+<script src="https://unpkg.com/element-plus@2.7.5/dist/index.full.min.js"></script>
+<!-- Element Plus Icons -->
+<script src="https://unpkg.com/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<!-- SheetJS -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Dexie.js -->
+<script src="https://unpkg.com/dexie@4.0.8/dist/dexie.min.js"></script>
+<!-- PWA -->
+<link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIuaZuuaFp+mAoOS7tyAtIEFJ5bel56iL6YCg5Lu35pm65YWl566h55CG5bmz5Y+wIiwKICAic2hvcnRfbmFtZSI6ICLmmbrmha/pmKDku7ciLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBjMWMzYyIsCiAgInRoZW1lX2NvbG9yIjogIiM0MDllZmYiLAogICJpY29ucyI6IFtdCn0=" />
+<meta name="theme-color" content="#409eff" />
+<!-- Application CSS -->
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app">
+  <!-- ==================== LOGIN PAGE ==================== -->
+  <div v-if="!loggedIn" class="login-wrap">
+    <div class="login-card fade-in">
+      <div class="login-logo">
+        <h1>🏗️ 智慧造价</h1>
+        <p>AI 工程造价智能管理平台 v3.0</p>
+      </div>
+      <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef">
+        <el-form-item prop="username">
+          <el-input v-model="loginForm.username" placeholder="请输入用户名" size="large" clearable>
+            <template #prefix><span style="font-size:18px">👤</span></template>
+          </el-input>
+        </el-form-item>
+        <el-form-item prop="password">
+          <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" size="large" show-password @keyup.enter="handleLogin">
+            <template #prefix><span style="font-size:18px">🔒</span></template>
+          </el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" size="large" style="width:100%;height:44px;font-size:16px" @click="handleLogin" :loading="loginLoading">
+            {{ loginLoading ? '验证中...' : '登 录' }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+      <div style="text-align:center;color:#909399;font-size:12px;margin-top:16px">
+        演示账号：admin / 123456 ｜ 首次登录自动注册
+      </div>
+      <div style="text-align:center;margin-top:20px">
+        <el-button link type="primary" @click="loginAsGuest">游客模式体验</el-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APP ==================== -->
+  <div v-else class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" :class="{dark:isDark}">
+      <div class="sidebar-header">
+        <h2>🏗️ 智慧造价</h2>
+        <small>AI-Powered Cost Engineering</small>
+      </div>
+      <nav class="sidebar-nav">
+        <div v-for="item in navItems" :key="item.key" class="nav-item" :class="{active:currentPage===item.key}" @click="navigate(item.key)">
+          <span v-html="item.icon"></span>
+          <span>{{ item.label }}</span>
+          <el-badge v-if="item.badge" :value="item.badge" class="item" style="margin-left:auto" />
+        </div>
+      </nav>
+      <div style="padding:16px;border-top:1px solid rgba(255,255,255,0.1)">
+        <div style="color:rgba(255,255,255,0.45);font-size:12px;text-align:center;margin-bottom:8px">
+          👤 {{ currentUser?.displayName || currentUser?.username }}
+        </div>
+        <el-button type="primary" size="small" style="width:100%;margin-bottom:6px" @click="goCreateProject">➕ 新建项目</el-button>
+        <el-button size="small" style="width:100%" @click="handleLogout">退出登录</el-button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+      <!-- ====== DASHBOARD ====== -->
+      <div v-if="currentPage==='dashboard'" class="fade-in">
+        <div class="page-header">
+          <h2>📊 数据看板</h2>
+          <p>项目总览 · 效能统计 · 成本分析</p>
+        </div>
+        <!-- Stat Cards -->
+        <div class="stat-row">
+          <div class="stat-card" v-for="s in dashboardStats" :key="s.label">
+            <div class="stat-icon" :style="{background:s.color}">{{ s.icon }}</div>
+            <div class="stat-info">
+              <h3>{{ s.value }}</h3>
+              <p>{{ s.label }}</p>
+              <span class="stat-trend" :class="s.trend>0?'up':'down'">{{ s.trend>0?'↑':'↓' }} {{ Math.abs(s.trend) }}%</span>
+            </div>
+          </div>
+        </div>
+        <!-- Charts -->
+        <div class="chart-row">
+          <div class="chart-box"><h3>📈 月度成本趋势</h3><div :id="'chart-cost-trend'" style="height:300px"></div></div>
+          <div class="chart-box"><h3>🍩 成本构成分析</h3><div :id="'chart-cost-pie'" style="height:300px"></div></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3>📊 各阶段效能对比</h3><div :id="'chart-efficiency'" style="height:300px"></div></div>
+          <div class="chart-box"><h3>⚠️ 风险分布</h3><div :id="'chart-risk'" style="height:300px"></div></div>
+        </div>
+        <!-- Recent Projects Table -->
+        <div class="card">
+          <div class="card-title">📋 近期项目</div>
+          <el-table :data="allProjects" stripe style="width:100%" size="small">
+            <el-table-column prop="id" label="编号" width="80" />
+            <el-table-column prop="name" label="项目名称" />
+            <el-table-column prop="type" label="类型" width="100" />
+            <el-table-column prop="budget" label="预算(万元)" width="120" sortable>
+              <template #default="scope">{{ scope.row.budget.toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column prop="actual" label="实际(万元)" width="120">
+              <template #default="scope">{{ scope.row.actual.toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column prop="stage" label="阶段" width="100">
+              <template #default="scope">
+                <el-tag size="small" :type="stageTagType(scope.row.stage)">{{ stageLabel(scope.row.stage) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="progress" label="进度" width="140">
+              <template #default="scope">
+                <el-progress :percentage="scope.row.progress" :stroke-width="6" :status="scope.row.status==='risk'?'exception':''" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ====== AI AGENT CHAT (AI智能助手) ====== -->
+      <div v-if="currentPage==='ai'" class="fade-in">
+        <div class="ai-layout">
+          <!-- History Sidebar -->
+          <div class="ai-sidebar">
+            <div class="ai-sidebar-header">
+              <span>💬</span><strong>对话历史</strong>
+              <el-button size="small" style="margin-left:auto" @click="newAIChat" circle>➕</el-button>
+            </div>
+            <div class="ai-history-list">
+              <div v-for="(h,i) in aiChatHistory" :key="h.id" class="ai-history-item" :class="{active:aiCurrentChatId===h.id}" @click="switchAIChat(h.id)">
+                <div class="title">{{ h.title || '新对话' }}</div>
+                <div class="time">{{ h.time }}</div>
+                <el-button size="small" type="danger" circle style="float:right" @click.stop="deleteAIChat(i)">✕</el-button>
+              </div>
+              <div v-if="!aiChatHistory.length" style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px">
+                暂无对话记录
+              </div>
+            </div>
+          </div>
+          <!-- Chat Main -->
+          <div class="ai-main">
+            <div class="ai-header">
+              <el-select v-model="aiActiveAgent" style="width:160px" size="small">
+                <el-option v-for="a in aiAgents" :key="a.key" :label="a.icon+' '+a.name" :value="a.key" />
+              </el-select>
+              <div v-if="aiContextLabel" class="ai-context-badge">{{ aiContextLabel }}</div>
+              <el-button size="small" @click="clearAIContext" v-if="aiContextLabel">清除上下文</el-button>
+              <div style="flex:1"></div>
+              <el-tag size="small" :type="aiConfigured?'success':'danger'">{{ aiConfigured ? '🟢 API已配置' : '🔴 未配置API' }}</el-tag>
+            </div>
+            <!-- Messages -->
+            <div class="ai-messages" ref="aiMessagesEl">
+              <div v-if="!currentAIMessages.length && !aiLoading" style="text-align:center;padding:40px;color:var(--text-secondary)">
+                <div style="font-size:48px;margin-bottom:16px">🤖</div>
+                <h3>{{ currentAgent?.name || 'AI造价助手' }}</h3>
+                <p style="margin-top:8px">{{ currentAgent?.desc || '选择一个Agent开始对话' }}</p>
+                <div class="ai-suggestions" style="justify-content:center;margin-top:16px">
+                  <span v-for="s in currentAgentSuggestions" :key="s" class="ai-suggestion" @click="sendSuggestion(s)">{{ s }}</span>
+                </div>
+              </div>
+              <div v-for="(m,mi) in currentAIMessages" :key="mi" class="ai-msg" :class="m.role">
+                <div class="ai-msg-avatar" :class="m.role">{{ m.role==='user'?'👤':'🤖' }}</div>
+                <div class="ai-msg-bubble" v-html="renderMarkdown(m.content)"></div>
+              </div>
+              <!-- Typing indicator -->
+              <div v-if="aiLoading" class="ai-msg assistant">
+                <div class="ai-msg-avatar assistant">🤖</div>
+                <div class="ai-msg-bubble"><div class="ai-typing"><span></span><span></span><span></span></div></div>
+              </div>
+            </div>
+            <!-- Input -->
+            <div class="ai-input-area">
+              <textarea v-model="aiInput" @keydown.enter.exact.prevent="sendAIMessage" @keydown.shift.enter="aiInput+='\n'" placeholder="输入造价问题... (Enter发送, Shift+Enter换行)" rows="1" ref="aiInputEl"></textarea>
+              <el-button type="primary" @click="sendAIMessage" :disabled="!aiInput.trim()||aiLoading" :loading="aiLoading">
+                {{ aiLoading ? '思考中' : '发送' }}
+              </el-button>
+              <el-button @click="stopAIStreaming" v-if="aiLoading" type="danger">停止</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== PROJECT MANAGEMENT (项目管理CRUD) ====== -->
+      <div v-if="currentPage==='projects'" class="fade-in">
+        <div class="page-header">
+          <h2>📁 项目管理</h2>
+          <p>项目新增 · 编辑 · 删除 · 搜索筛选</p>
+        </div>
+        <!-- Project Stats -->
+        <div class="project-stats">
+          <div class="project-stat-chip" v-for="ps in projectStatsChips" :key="ps.label">
+            <span>{{ ps.icon }}</span>
+            <div><strong>{{ ps.value }}</strong><p style="color:var(--text-secondary);font-size:11px">{{ ps.label }}</p></div>
+          </div>
+        </div>
+        <!-- Toolbar -->
+        <div class="project-toolbar">
+          <el-input v-model="projSearch" placeholder="🔍 搜索项目名称/编号..." style="width:260px" clearable @input="filterProjects" />
+          <el-select v-model="projTypeFilter" placeholder="项目类型" style="width:130px" clearable @change="filterProjects">
+            <el-option v-for="t in projTypes" :key="t" :label="t" :value="t" />
+          </el-select>
+          <el-select v-model="projStageFilter" placeholder="项目阶段" style="width:130px" clearable @change="filterProjects">
+            <el-option label="决策阶段" value="decision" />
+            <el-option label="招投标" value="bidding" />
+            <el-option label="施工阶段" value="construction" />
+            <el-option label="竣工阶段" value="completion" />
+          </el-select>
+          <el-select v-model="projStatusFilter" placeholder="状态" style="width:110px" clearable @change="filterProjects">
+            <el-option label="正常" value="normal" />
+            <el-option label="预警" value="warning" />
+            <el-option label="风险" value="risk" />
+          </el-select>
+          <div style="flex:1"></div>
+          <el-button type="primary" @click="openProjDialog()">➕ 新建项目</el-button>
+          <el-button @click="exportProjectsExcel">📥 导出Excel</el-button>
+        </div>
+        <!-- Projects Table -->
+        <div class="card">
+          <el-table :data="filteredProjects" stripe size="small" max-height="500" @selection-change="onProjSelect">
+            <el-table-column type="selection" width="40" />
+            <el-table-column prop="id" label="项目编号" width="120" sortable />
+            <el-table-column prop="name" label="项目名称" min-width="200">
+              <template #default="scope">
+                <span style="font-weight:500;cursor:pointer;color:var(--primary)" @click="openProjDialog(scope.row)">{{ scope.row.name }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="type" label="类型" width="90">
+              <template #default="scope"><el-tag size="small" type="info">{{ scope.row.type }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="discipline" label="专业" width="100" />
+            <el-table-column prop="budget" label="预算(万元)" width="120" sortable>
+              <template #default="scope">{{ scope.row.budget.toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column prop="actual" label="实际(万元)" width="120" sortable>
+              <template #default="scope">
+                <span :style="{color:scope.row.actual>scope.row.budget?'#f56c6c':''}">{{ scope.row.actual.toLocaleString() }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="stage" label="阶段" width="100">
+              <template #default="scope">
+                <el-tag size="small" :type="stageTagType(scope.row.stage)">{{ stageLabel(scope.row.stage) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="progress" label="进度" width="130">
+              <template #default="scope">
+                <el-progress :percentage="scope.row.progress" :stroke-width="5" :status="scope.row.status==='risk'?'exception':scope.row.status==='warning'?'warning':''" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="80">
+              <template #default="scope">
+                <el-tag size="small" :type="scope.row.status==='normal'?'success':scope.row.status==='warning'?'warning':'danger'">
+                  {{ scope.row.status==='normal'?'正常':scope.row.status==='warning'?'预警':'风险' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="location" label="地点" width="120" />
+            <el-table-column label="操作" width="160" fixed="right">
+              <template #default="scope">
+                <el-button size="small" type="primary" @click="openProjDialog(scope.row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="deleteProject(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <!-- Project Add/Edit Dialog -->
+        <el-dialog v-model="projDialogVisible" :title="editingProj ? '编辑项目' : '新建项目'" width="700px" @close="resetProjForm">
+          <div class="proj-dialog-form">
+            <el-form :model="projForm" label-width="100px" :inline="true" size="small">
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="项目编号" required><el-input v-model="projForm.id" :disabled="!!editingProj" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="项目名称" required><el-input v-model="projForm.name" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="项目类型"><el-select v-model="projForm.type" style="width:100%"><el-option v-for="t in projTypes" :key="t" :label="t" :value="t" /></el-select></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="专业分类"><el-select v-model="projForm.discipline" style="width:100%"><el-option v-for="d in disciplines" :key="d" :label="d" :value="d" /></el-select></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="预算(万元)"><el-input-number v-model="projForm.budget" :min="0" :precision="2" style="width:100%" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="实际(万元)"><el-input-number v-model="projForm.actual" :min="0" :precision="2" style="width:100%" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="项目阶段"><el-select v-model="projForm.stage" style="width:100%"><el-option label="决策阶段" value="decision" /><el-option label="招投标" value="bidding" /><el-option label="施工阶段" value="construction" /><el-option label="竣工阶段" value="completion" /></el-select></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="进度(%)"><el-slider v-model="projForm.progress" :max="100" show-input style="width:100%" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="状态"><el-select v-model="projForm.status" style="width:100%"><el-option label="正常" value="normal" /><el-option label="预警" value="warning" /><el-option label="风险" value="risk" /></el-select></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="项目地点"><el-input v-model="projForm.location" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="开工日期"><el-date-picker v-model="projForm.startDate" type="date" style="width:100%" /></el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="竣工日期"><el-date-picker v-model="projForm.endDate" type="date" style="width:100%" /></el-form-item>
+                </el-col>
+                <el-col :span="24">
+                  <el-form-item label="项目描述"><el-input v-model="projForm.description" type="textarea" :rows="2" /></el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </div>
+          <template #footer>
+            <el-button @click="projDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="saveProject" :loading="projSaving">{{ editingProj ? '更新' : '创建' }}</el-button>
+          </template>
+        </el-dialog>
+      </div>
+
+      <!-- ====== AGENT DEBATE CHAMBER (多Agent辩论室) ====== -->
+      <div v-if="currentPage==='debate'" class="fade-in">
+        <div class="page-header"><h2>🎭 Agent辩论室</h2><p>三Agent同时辩论 · 仲裁综合结论 · 发现最优成本方案</p></div>
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-input v-model="debateTopic" placeholder="输入辩论议题，如：'地下室防水方案选用SBS还是TPO更经济？'" style="flex:1;min-width:300px" size="large" @keyup.enter="startDebate" />
+            <el-button type="primary" size="large" @click="startDebate" :loading="debating&&debatePhase==='debating'" :disabled="!debateTopic.trim()">
+              🎭 {{ debating ? '辩论中...' : '开始辩论' }}
+            </el-button>
+            <el-button v-if="debating" size="large" type="danger" @click="stopDebate">停止</el-button>
+          </div>
+          <!-- Phase Indicator -->
+          <div class="phase-indicator" v-if="debatePhase!=='ready'">
+            <div class="phase-dot" :class="debatePhase==='debating'?'active':debatePhase!=='ready'?'done':'pending'"></div><span style="font-size:12px">Round 1 各方陈述</span>
+            <span style="color:var(--border)">→</span>
+            <div class="phase-dot" :class="debatePhase==='arbitrating'?'active':debatePhase==='done'?'done':'pending'"></div><span style="font-size:12px">Round 2 交叉反驳</span>
+            <span style="color:var(--border)">→</span>
+            <div class="phase-dot" :class="debatePhase==='done'?'done':'pending'"></div><span style="font-size:12px">仲裁结论</span>
+          </div>
+        </div>
+        <!-- Three Debate Panels -->
+        <div class="debate-panels" v-if="debateResults.length">
+          <div class="debate-panel" v-for="dr in debateResults" :key="dr.agentKey">
+            <div class="debate-panel-header" :style="{background:dr.color}">
+              <span>{{ dr.icon }}</span><span>{{ dr.name }}</span>
+              <span v-if="dr.done" style="margin-left:auto;font-size:11px">✅</span>
+              <span v-else-if="debating" style="margin-left:auto;font-size:11px" class="pulse">⏳</span>
+            </div>
+            <div class="debate-panel-body">
+              <div v-if="!dr.content&&debating" style="text-align:center;color:var(--text-secondary);padding:20px">等待中...</div>
+              <div v-else v-html="dr.content.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Arbitration Consensus -->
+        <div v-if="debateConsensus" class="debate-consensus" style="margin-top:16px">
+          <h4>⚖️ 首席仲裁师综合结论</h4>
+          <div v-html="debateConsensus.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/## (.+)/g,'<h4>$1</h4>')" style="font-size:13px;line-height:1.8;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- ====== WAR GAME SIMULATOR (沙盘推演) ====== -->
+      <div v-if="currentPage==='wargame'" class="fade-in">
+        <div class="page-header"><h2>🎲 造价沙盘推演</h2><p>模拟黑天鹅事件 · 评估项目韧性 · 制定应对策略</p></div>
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="wargameProject" placeholder="选择目标项目" style="width:260px" size="large">
+              <el-option v-for="p in allProjects" :key="p.id" :label="p.id+' '+p.name" :value="p.id" />
+            </el-select>
+            <el-button type="primary" size="large" @click="runWarGame" :loading="wargameRunning" :disabled="!wargameProject">
+              🎲 {{ wargameRunning ? '推演中 ('+wargameProgress+'%)' : '启动推演' }}
+            </el-button>
+            <el-button v-if="wargameResults.length" @click="clearWargame">清除结果</el-button>
+          </div>
+          <!-- Progress -->
+          <el-progress v-if="wargameRunning" :percentage="wargameProgress" :stroke-width="8" style="margin-bottom:16px" />
+        </div>
+        <!-- Resilience Score -->
+        <div v-if="resilienceScore" class="resilience-score">
+          <div style="font-size:14px;color:var(--text-secondary)">项目韧性评分</div>
+          <div class="big-score" :style="{color:resilienceScore.color}">{{ resilienceScore.score }}</div>
+          <div class="level-badge" :style="{background:resilienceScore.color,color:'#fff'}">{{ resilienceScore.level }}</div>
+        </div>
+        <!-- Scenario Cards -->
+        <div class="wargame-grid" v-if="wargameResults.length">
+          <div v-for="r in wargameResults" :key="r.id" class="wargame-card" :class="r.impactPercent>20?'severe':r.impactPercent>10?'moderate':'mild'">
+            <div class="wargame-card-header">
+              <span style="font-size:28px">{{ r.icon }}</span>
+              <div>
+                <h4>{{ r.name }}</h4>
+                <span style="font-size:12px;color:var(--text-secondary)">严重度 {{ r.severity }}/10 · 概率 {{ r.prob }}</span>
+              </div>
+              <div style="margin-left:auto;text-align:right">
+                <div style="font-size:22px;font-weight:700" :style="{color:r.impactPercent>20?'#f56c6c':r.impactPercent>10?'#e6a23c':'#67c23a'}">{{ r.impactPercent }}%</div>
+                <div style="font-size:11px;color:var(--text-secondary)">预算占比</div>
+              </div>
+            </div>
+            <div class="wargame-card-body" v-html="r.analysis.replace(/\n/g,'<br>').replace(/## (.+)/g,'<h5>$1</h5>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')"></div>
+          </div>
+        </div>
+        <!-- Wargame Chart -->
+        <div v-if="wargameResults.length" class="card" style="margin-top:16px">
+          <div class="card-title">📊 影响对比</div>
+          <div id="chart-wargame" style="height:300px"></div>
+        </div>
+      </div>
+
+      <!-- ====== PATROL AGENT (智能巡检) ====== -->
+      <div v-if="currentPage==='patrol'" class="fade-in">
+        <div class="page-header"><h2>🦾 智能巡检Agent</h2><p>自主定时扫描 · 异常自动预警 · 每日造价晨报</p></div>
+        <!-- Rule Config -->
+        <div class="card">
+          <div class="card-title">⚙️ 巡检规则</div>
+          <div class="patrol-rules">
+            <div v-for="rule in patrolRules" :key="rule.id" class="patrol-rule">
+              <span class="patrol-rule-icon">{{ rule.icon }}</span>
+              <div class="patrol-rule-info"><h4>{{ rule.name }}</h4><p>{{ rule.desc }}</p></div>
+              <el-switch v-model="rule.enabled" @change="togglePatrolRule(rule.id)" />
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <el-button type="primary" @click="runPatrol" :loading="patrolRunning">
+              🔍 {{ patrolRunning ? '巡检中...' : '立即巡检' }}
+            </el-button>
+            <el-button :type="patrolAutoMode?'warning':'info'" @click="patrolAutoMode?stopAutoPatrol():startAutoPatrol()">
+              {{ patrolAutoMode ? '⏸ 停止自劼巡检' : '▶ 开启自劼巡检' }}
+            </el-button>
+            <span v-if="patrolAutoMode" style="font-size:12px;color:var(--text-secondary)">下次巡检: {{ nextPatrolTime }}</span>
+            <el-select v-model="patrolSchedule" @change="updatePatrolSchedule(patrolSchedule)" v-if="patrolAutoMode" style="width:140px" size="small">
+              <el-option :value="1800" label="每30分钟" /><el-option :value="3600" label="每小时" /><el-option :value="7200" label="每2小时" />
+            </el-select>
+            <el-button @click="generateMorningBrief" style="margin-left:auto">📋 生成晨报</el-button>
+          </div>
+        </div>
+        <!-- Patrol Results -->
+        <div v-if="patrolResults.length" class="card" style="margin-top:16px">
+          <div class="card-title">
+            📊 巡检结果
+            <el-tag :type="patrolStatusClass==='normal'?'success':patrolStatusClass==='warning'?'warning':'danger'" style="margin-left:8px">
+              {{ patrolStatusClass==='normal'?'☀️ 正常':patrolStatusClass==='warning'?'🌤️ 关注':'⛈️ 告警' }}
+            </el-tag>
+            <span style="font-weight:400;font-size:13px;color:var(--text-secondary);margin-left:8px">{{ patrolAlertCount }} 个告警</span>
+          </div>
+          <div v-for="(r,i) in patrolResults" :key="i" class="patrol-finding" :class="r.hasAlert?'alert':r.severity==='warning'?'warning':'normal'">
+            <div style="font-size:20px">{{ r.hasAlert?'⚠️':'✅' }}</div>
+            <div style="flex:1;font-size:13px">
+              <strong>{{ r.ruleName }}</strong>
+              <div style="margin-top:4px;white-space:pre-wrap">{{ r.analysis }}</div>
+              <div style="font-size:11px;color:var(--text-secondary);margin-top:4px">{{ r.timestamp }}</div>
+            </div>
+          </div>
+          <el-button @click="exportPatrolReport" style="margin-top:8px">📥 导出巡检报告</el-button>
+        </div>
+      </div>
+
+      <!-- ====== NEGOTIATION SIMULATOR (索赔博弈) ====== -->
+      <div v-if="currentPage==='negotiation'" class="fade-in">
+        <div class="page-header"><h2>⚖️ 索赔博弈模拟器</h2><p>三角色对抗模拟 · BATNA分析 · 谈判策略建议</p></div>
+        <div class="card">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="negoProjectId" placeholder="关联项目" style="width:220px">
+              <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+            </el-select>
+            <el-input-number v-model="negoClaimAmount" :min="0" :precision="2" placeholder="索赔金额" style="width:160px" />
+            <span style="line-height:32px;color:var(--text-secondary)">万元</span>
+            <el-input v-model="negoScenario" placeholder="描述索赔场景，如：地下室渗漏修复费用索赔..." style="flex:1;min-width:280px" />
+            <el-button type="primary" @click="startNegotiation" :loading="negoRunning" :disabled="!negoScenario.trim()">
+              ⚖️ {{ negoRunning ? '模拟中...' : '开始模拟' }}
+            </el-button>
+          </div>
+        </div>
+        <!-- Three-Column Result -->
+        <div v-if="negoResults.ourSide" class="nego-columns">
+          <div class="nego-column">
+            <div class="nego-col-header" style="background:#67c23a">🟢 己方造价师（施工方立场）</div>
+            <div class="nego-col-body" v-html="negoResults.ourSide.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')"></div>
+          </div>
+          <div class="nego-column">
+            <div class="nego-col-header" style="background:#f56c6c">🔴 对方造价师（甲方立场）</div>
+            <div class="nego-col-body" v-html="negoResults.theirSide.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')"></div>
+          </div>
+          <div class="nego-column">
+            <div class="nego-col-header" style="background:#6366f1">⚖️ 第三方仲裁</div>
+            <div class="nego-col-body" v-html="negoResults.arbitrator.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')"></div>
+          </div>
+        </div>
+        <!-- BATNA Zone -->
+        <div v-if="negoResults.batna" class="batna-zone">
+          <h4>📊 谈判区间分析 (BATNA)</h4>
+          <div class="batna-bar">
+            <div class="batna-zone-seg" style="flex:2;background:#f56c6c;border-radius:20px 0 0 20px">最差: {{ negoResults.batna.worst }}万</div>
+            <div class="batna-zone-seg" style="flex:5;background:#e6a23c">最可能: {{ negoResults.batna.likely }}万</div>
+            <div class="batna-zone-seg" style="flex:3;background:#67c23a;border-radius:0 20px 20px 0">最佳: {{ negoResults.batna.best }}万</div>
+          </div>
+          <div class="batna-label">▲ 建议开价 {{ negoResults.strategy?.opening }}万 | 目标 {{ negoResults.strategy?.target }}万 | 底线 {{ negoResults.strategy?.walkaway }}万</div>
+        </div>
+      </div>
+
+      <!-- ====== MEMORY BROWSER (记忆图谱) ====== -->
+      <div v-if="currentPage==='memory'" class="fade-in">
+        <div class="page-header"><h2>🧠 记忆图谱</h2><p>Agent自动积累经验 · 历史决策检索 · 智能上下文注入</p></div>
+        <!-- Stats -->
+        <div class="stat-row" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+          <div class="stat-card" v-for="ms in memoryStats" :key="ms.label">
+            <div class="stat-icon" :style="{background:ms.color}">{{ ms.icon }}</div>
+            <div class="stat-info"><h3>{{ ms.value }}</h3><p>{{ ms.label }}</p></div>
+          </div>
+        </div>
+        <!-- Search & Filter -->
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-input v-model="memorySearchQuery" placeholder="🔍 搜索记忆..." style="width:280px" clearable @input="searchMemory" />
+            <el-select v-model="memoryFilterType" placeholder="类型筛选" style="width:150px" clearable @change="searchMemory">
+              <el-option v-for="t in decisionTypes" :key="t" :label="t" :value="t" />
+            </el-select>
+            <el-button @click="exportMemories" style="margin-left:auto">📥 导出记忆</el-button>
+            <el-button type="danger" @click="clearAllMemories">🗑️ 清除全部</el-button>
+          </div>
+        </div>
+        <!-- Memory Timeline -->
+        <div class="memory-timeline" v-if="filteredMemories.length">
+          <div v-for="mem in filteredMemories" :key="mem.id" class="memory-entry" @click="viewMemoryDetail(mem)" style="cursor:pointer">
+            <span class="type-tag" :style="{background:decisionTypeColor(mem.type),color:'#fff'}">{{ mem.type }}</span>
+            <div style="font-size:13px"><strong>{{ mem.context?.slice(0,80) }}...</strong></div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">{{ mem.time }} · {{ mem.projectId }}</div>
+            <div class="memory-keywords" v-if="mem.keywords">
+              <span class="memory-kw" v-for="kw in (mem.keywords||[]).slice(0,5)" :key="kw">{{ kw }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="card" style="text-align:center;padding:40px;color:var(--text-secondary)">
+          <div style="font-size:48px">🧠</div>
+          <p>暂无记忆记录</p>
+          <p style="font-size:12px">Agent会在您操作时自动记录关键决策</p>
+        </div>
+        <!-- Detail Dialog -->
+        <el-dialog v-model="memoryDetailVisible" title="记忆详情" width="600px">
+          <template v-if="viewingMemory">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="类型">{{ viewingMemory.type }}</el-descriptions-item>
+              <el-descriptions-item label="时间">{{ viewingMemory.time }}</el-descriptions-item>
+              <el-descriptions-item label="关联项目">{{ viewingMemory.projectId }}</el-descriptions-item>
+              <el-descriptions-item label="决策">{{ viewingMemory.decision }}</el-descriptions-item>
+              <el-descriptions-item label="上下文" :span="2">{{ viewingMemory.context }}</el-descriptions-item>
+            </el-descriptions>
+          </template>
+        </el-dialog>
+      </div>
+
+      <!-- ====== DOCUMENT UPLOAD (多模态识别) ====== -->
+      <div v-if="currentPage==='upload'" class="fade-in">
+        <div class="page-header">
+          <h2>📄 多模态图纸/文件识别</h2>
+          <p>支持国产 OCR 引擎 · 图纸智能解析 · 工程量自动提取</p>
+        </div>
+        <div class="card">
+          <div class="upload-zone" @click="triggerUpload" @dragover.prevent @drop.prevent="handleDrop">
+            <div style="font-size:48px;margin-bottom:12px">📤</div>
+            <p style="font-size:16px;font-weight:500">点击上传或拖拽文件到此处</p>
+            <p>支持 DWG / PDF / Excel / PNG / JPG / TIFF 格式</p>
+            <div class="upload-types">
+              <span class="upload-type-tag">📐 图纸文件 (.dwg .dxf)</span>
+              <span class="upload-type-tag">📑 清单文件 (.pdf .xlsx)</span>
+              <span class="upload-type-tag">🖼️ 图片文件 (.png .jpg .tiff)</span>
+            </div>
+          </div>
+          <input ref="fileInput" type="file" multiple accept=".dwg,.dxf,.pdf,.xlsx,.xls,.png,.jpg,.jpeg,.tiff,.tif" style="display:none" @change="handleFileSelect">
+        </div>
+        <!-- Uploaded Files -->
+        <div v-if="uploadedFiles.length" class="card">
+          <div class="card-title">📋 已上传文件 ({{ uploadedFiles.length }})</div>
+          <div v-for="(f,i) in uploadedFiles" :key="i" class="file-item">
+            <div class="file-info">
+              <span class="file-icon">{{ fileIcon(f.name) }}</span>
+              <div>
+                <div style="font-weight:500">{{ f.name }}</div>
+                <div style="font-size:12px;color:var(--text-secondary)">{{ formatSize(f.size) }} · {{ f.time }}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <el-tag v-if="f.status==='done'" type="success" size="small">识别完成</el-tag>
+              <el-tag v-else-if="f.status==='processing'" type="warning" size="small" class="pulse">识别中...</el-tag>
+              <el-tag v-else type="info" size="small">待识别</el-tag>
+              <el-progress v-if="f.status==='processing'" :percentage="f.progress" :stroke-width="4" style="width:100px" />
+              <el-button v-if="f.status==='pending'" type="primary" size="small" @click="startOCR(f,i)">开始识别</el-button>
+              <el-button size="small" type="danger" circle @click="removeFile(i)">✕</el-button>
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <el-button type="primary" :disabled="!hasPendingFiles" @click="batchOCR" :loading="ocrRunning">
+              🚀 批量识别 (模拟国产OCR引擎)
+            </el-button>
+            <el-button v-if="allFilesDone" type="success" @click="navigate('quantity')">
+              → 进入AI自动算量
+            </el-button>
+          </div>
+        </div>
+        <!-- OCR Results Preview -->
+        <div v-if="ocrResults.length" class="card">
+          <div class="card-title">🔍 识别结果预览</div>
+          <el-table :data="ocrResults" stripe size="small" max-height="400">
+            <el-table-column prop="element" label="识别要素" width="140" />
+            <el-table-column prop="value" label="提取值" />
+            <el-table-column prop="confidence" label="置信度" width="100">
+              <template #default="scope">
+                <el-progress :percentage="scope.row.confidence" :stroke-width="6" :color="scope.row.confidence>85?'#67c23a':'#e6a23c'" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="source" label="来源文件" width="160" />
+          </el-table>
+        </div>
+      </div>
+
+      <!-- ====== DATA IMPORT (数据导入) ====== -->
+      <div v-if="currentPage==='imports'" class="fade-in">
+        <div class="page-header">
+          <h2>📥 数据导入</h2>
+          <p>从Excel批量导入工程量清单、定额数据 · 支持模板下载 · 预览后确认导入</p>
+        </div>
+        <!-- Import Tabs -->
+        <el-tabs v-model="importTab" type="border-card">
+          <!-- Import Quantity List -->
+          <el-tab-pane label="📐 导入工程量清单" name="quantity">
+            <div class="card">
+              <div class="card-title">📋 操作步骤</div>
+              <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+                <el-steps :active="importStep" align-center style="flex:1;min-width:300px">
+                  <el-step title="下载模板" description="获取标准模板文件" />
+                  <el-step title="填写数据" description="按模板格式填写" />
+                  <el-step title="上传文件" description="上传并预览" />
+                  <el-step title="确认导入" description="写入系统" />
+                </el-steps>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <el-button type="primary" @click="downloadQuantityTemplate">📥 下载工程量清单模板</el-button>
+                <el-button @click="downloadPricingTemplate">📥 下载定额数据模板</el-button>
+                <el-tag type="info" style="line-height:32px">模板包含表头示例，按格式填写后上传即可</el-tag>
+              </div>
+            </div>
+            <!-- Upload Import File -->
+            <div class="card" style="margin-top:16px">
+              <div class="card-title">📤 上传导入文件</div>
+              <div class="import-zone" @click="triggerImportUpload" @dragover.prevent @drop.prevent="handleImportDrop">
+                <div style="font-size:40px;margin-bottom:8px">📊</div>
+                <p style="font-weight:500">点击上传 Excel 文件 (.xlsx .xls)</p>
+                <p style="color:var(--text-secondary);font-size:13px">支持工程量清单和定额数据，最大10MB</p>
+                <input ref="importFileInput" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportFile">
+              </div>
+              <div v-if="importFileName" style="margin-top:12px;display:flex;align-items:center;gap:8px">
+                <span>📎 <strong>{{ importFileName }}</strong></span>
+                <el-tag size="small" type="success">已加载</el-tag>
+                <el-button size="small" @click="clearImportFile">清除</el-button>
+              </div>
+            </div>
+            <!-- Column Mapping -->
+            <div v-if="importColumns.length" class="card" style="margin-top:16px">
+              <div class="card-title">🔗 字段映射</div>
+              <p style="color:var(--text-secondary);font-size:13px;margin-bottom:12px">将Excel列映射到系统字段（自动匹配，可手动调整）</p>
+              <div v-for="(col,i) in importColumns" :key="i" class="mapping-row">
+                <span>Excel列: <strong>{{ col.name }}</strong></span>
+                <span>→</span>
+                <el-select v-model="col.mappedTo" size="small" style="width:220px">
+                  <el-option v-for="f in importFields" :key="f.value" :label="f.label" :value="f.value" />
+                  <el-option label="-- 忽略此列 --" value="" />
+                </el-select>
+                <el-tag v-if="col.matched" size="small" type="success">自动匹配</el-tag>
+              </div>
+            </div>
+            <!-- Preview -->
+            <div v-if="importPreviewRows.length" class="card" style="margin-top:16px">
+              <div class="card-title">
+                👁️ 数据预览
+                <span style="font-weight:400;font-size:13px;color:var(--text-secondary);margin-left:8px">
+                  共 {{ importPreviewRows.length }} 行 ({{ importPreviewCols }} 列)
+                </span>
+              </div>
+              <div class="import-preview">
+                <table>
+                  <thead><tr><th v-for="(c,i) in importHeader" :key="i">{{ c }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(row,ri) in importPreviewRows.slice(0,20)" :key="ri">
+                      <td v-for="(cell,ci) in row" :key="ci">{{ cell }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div v-if="importPreviewRows.length>20" style="text-align:center;padding:8px;color:var(--text-secondary);font-size:12px">
+                  ... 仅显示前20行，共 {{ importPreviewRows.length }} 行
+                </div>
+              </div>
+              <div style="margin-top:16px;display:flex;gap:8px">
+                <el-button type="success" size="large" @click="confirmImport" :loading="importConfirming" :disabled="!importReady">
+                  ✅ 确认导入 ({{ importTarget === 'quantity' ? '工程量清单' : '定额数据' }})
+                </el-button>
+                <el-button size="large" @click="cancelImport">取消</el-button>
+              </div>
+            </div>
+          </el-tab-pane>
+          <!-- Import Daily Prices -->
+          <el-tab-pane label="💰 导入市场价格" name="market">
+            <div class="card">
+              <div class="card-title">📊 导入材料/人工市场价格</div>
+              <p style="color:var(--text-secondary);margin-bottom:12px">导入地方信息价或企业询价数据，用于智能组价的市场价对比</p>
+              <div class="import-zone" @click="triggerImportMarketUpload" @dragover.prevent @drop.prevent="handleImportMarketDrop">
+                <div style="font-size:40px;margin-bottom:8px">💰</div>
+                <p style="font-weight:500">点击上传市场价格表 (.xlsx .xls)</p>
+                <p>格式：材料名称 | 规格型号 | 单位 | 单价(元) | 地区 | 日期</p>
+                <input ref="importMarketInput" type="file" accept=".xlsx,.xls" style="display:none" @change="handleImportMarketFile">
+              </div>
+              <div style="margin-top:12px">
+                <el-button size="small" @click="generateSampleMarketPrices">📊 生成示例市场价数据</el-button>
+                <span style="font-size:12px;color:var(--text-secondary);margin-left:8px">用于测试智能组价的市场价对比</span>
+              </div>
+              <div v-if="marketPrices.length" style="margin-top:16px">
+                <el-tag type="success" size="large">已导入 {{ marketPrices.length }} 条市场价格</el-tag>
+                <el-table :data="marketPrices.slice(0,10)" stripe size="small" style="margin-top:12px" max-height="300">
+                  <el-table-column prop="name" label="材料名称" />
+                  <el-table-column prop="spec" label="规格" />
+                  <el-table-column prop="unit" label="单位" width="70" />
+                  <el-table-column prop="price" label="单价(元)" sortable />
+                  <el-table-column prop="region" label="地区" />
+                  <el-table-column prop="date" label="日期" />
+                </el-table>
+                <el-button type="primary" style="margin-top:12px" @click="applyMarketPrices">应用到智能组价</el-button>
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- ====== AI AUTO QUANTITY (AI自动算量) ====== -->
+      <div v-if="currentPage==='quantity'" class="fade-in">
+        <div class="page-header">
+          <h2>🤖 AI 自动算量</h2>
+          <p>基于识别结果智能计算工程量 · 支持多专业（建筑/结构/机电/装饰）</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="calcDiscipline" placeholder="选择专业" style="width:180px">
+              <el-option v-for="d in disciplines" :key="d" :label="d" :value="d" />
+            </el-select>
+            <el-select v-model="calcProject" placeholder="选择项目" style="width:240px">
+              <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+            </el-select>
+            <el-button type="primary" @click="runAutoCalc" :loading="calcRunning">
+              ⚡ {{ calcRunning ? 'AI计算中...' : '一键自动算量' }}
+            </el-button>
+            <el-button @click="exportQuantityExcel">📥 导出Excel</el-button>
+            <el-button @click="exportQuantityPDF">📄 导出PDF</el-button>
+          </div>
+        </div>
+        <!-- Formula Calculation Engine -->
+        <div class="card">
+          <div class="card-title">
+            🧮 手工算量公式引擎
+            <el-switch v-model="showFormulaEngine" active-text="开启" inactive-text="关闭" style="margin-left:12px" />
+          </div>
+          <div v-if="showFormulaEngine" class="formula-section">
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+              <el-select v-model="formulaComponent" placeholder="选择构件类型" style="width:240px" @change="onFormulaComponentChange">
+                <el-option v-for="fc in formulaComponents" :key="fc.type" :label="fc.type" :value="fc.type">
+                  <span>{{ fc.icon }} {{ fc.type }}</span>
+                </el-option>
+              </el-select>
+              <el-select v-model="formulaCalcDiscipline" placeholder="选择专业" style="width:160px">
+                <el-option v-for="d in disciplines" :key="d" :label="d" :value="d" />
+              </el-select>
+              <el-tag v-if="formulaComponent" type="info">公式: {{ currentFormula?.formula }}</el-tag>
+            </div>
+            <!-- Formula Parameter Inputs -->
+            <div class="formula-grid" v-if="currentFormula">
+              <div class="formula-field" v-for="(p,i) in currentFormula.params" :key="i">
+                <label>{{ p }}</label>
+                <input type="number" v-model.number="formulaParams[i]" step="any" min="0" @input="calcFormulaResult" placeholder="输入数值" />
+              </div>
+            </div>
+            <!-- Result & Add -->
+            <div class="formula-result" v-if="formulaResult>0 && formulaComponent">
+              <p>计算结果 ({{ currentFormula?.unit }})</p>
+              <h3>{{ formulaResult.toLocaleString() }} {{ currentFormula?.unit }}</h3>
+              <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
+                <el-input v-model="formulaItemName" placeholder="清单项目名称" style="width:260px" size="small" />
+                <el-input-number v-model="formulaUnitPrice" :min="0" :precision="2" placeholder="单价" style="width:140px" size="small" />
+                <el-button type="primary" size="small" @click="addFormulaToQuantity">➕ 添加到清单</el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quantity Result -->
+        <div v-if="quantityItems.length" class="card">
+          <div class="card-title">
+            📐 工程量清单
+            <span style="font-weight:400;font-size:13px;color:var(--text-secondary);margin-left:8px">
+              共 {{ quantityItems.length }} 项 · 合计：<strong style="color:var(--primary)">{{ formatMoney(quantityTotal) }}</strong>
+            </span>
+          </div>
+          <el-table :data="quantityItems" stripe size="small" max-height="500" @cell-dblclick="editTableCell">
+            <el-table-column prop="code" label="清单编码" width="140" />
+            <el-table-column prop="name" label="项目名称" min-width="200" />
+            <el-table-column prop="unit" label="单位" width="70" />
+            <el-table-column prop="quantity" label="工程量" width="120" sortable>
+              <template #default="scope">
+                <span class="editable-cell" @dblclick.stop="editCell(scope.row,'quantity')">{{ scope.row.quantity.toLocaleString() }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="unitPrice" label="综合单价(元)" width="130" sortable>
+              <template #default="scope">
+                <span class="editable-cell" @dblclick.stop="editCell(scope.row,'unitPrice')">{{ scope.row.unitPrice.toFixed(2) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="totalPrice" label="合价(元)" width="140" sortable>
+              <template #default="scope">
+                <strong>{{ scope.row.totalPrice.toLocaleString() }}</strong>
+              </template>
+            </el-table-column>
+            <el-table-column prop="category" label="分类" width="90">
+              <template #default="scope"><el-tag size="small">{{ scope.row.category }}</el-tag></template>
+            </el-table-column>
+          </el-table>
+          <!-- Edit Dialog -->
+          <el-dialog v-model="editDialogVisible" title="编辑单元格" width="400px">
+            <el-form>
+              <el-form-item label="当前值">
+                <el-input-number v-model="editValue" :precision="2" style="width:100%" />
+              </el-form-item>
+            </el-form>
+            <template #footer>
+              <el-button @click="editDialogVisible=false">取消</el-button>
+              <el-button type="primary" @click="saveEdit">保存</el-button>
+            </template>
+          </el-dialog>
+        </div>
+      </div>
+
+      <!-- ====== SMART PRICING (智能组价) ====== -->
+      <div v-if="currentPage==='pricing'" class="fade-in">
+        <div class="page-header">
+          <h2>💰 智能组价套定额</h2>
+          <p>自动匹配政策定额 · 人工/材料/机械价格 · 市场价智能比对</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="pricingRegion" placeholder="选择地区" style="width:160px">
+              <el-option v-for="r in regions" :key="r" :label="r" :value="r" />
+            </el-select>
+            <el-select v-model="pricingStandard" placeholder="定额标准" style="width:200px">
+              <el-option v-for="s in quotaStandards" :key="s" :label="s" :value="s" />
+            </el-select>
+            <el-date-picker v-model="pricingDate" type="month" placeholder="信息价月份" style="width:160px" />
+            <el-button type="primary" @click="runAutoPricing" :loading="pricingRunning">
+              🔍 {{ pricingRunning ? '智能匹配中...' : '智能组价' }}
+            </el-button>
+          </div>
+        </div>
+        <!-- Quota Database Browser -->
+        <div class="card">
+          <div class="card-title">
+            📚 定额库查询
+            <el-switch v-model="showQuotaBrowser" active-text="展开" inactive-text="收起" style="margin-left:12px" />
+          </div>
+          <div v-if="showQuotaBrowser">
+            <div class="quota-search-bar">
+              <el-input v-model="quotaSearch" placeholder="🔍 搜索定额名称/编号..." style="width:280px" clearable @input="filterQuotaDB" />
+              <el-select v-model="quotaCatFilter" placeholder="定额分类" style="width:180px" clearable @change="filterQuotaDB">
+                <el-option v-for="c in quotaCategories" :key="c" :label="c" :value="c" />
+              </el-select>
+              <el-select v-model="quotaRegionFilter" placeholder="适用地区" style="width:150px" clearable @change="filterQuotaDB">
+                <el-option v-for="r in regions" :key="r" :label="r" :value="r" />
+                <el-option label="全国通用" value="全国通用" />
+              </el-select>
+              <span style="color:var(--text-secondary);font-size:13px;margin-left:auto">
+                共 {{ filteredQuotaDB.length }} 条定额
+              </span>
+            </div>
+            <div class="quota-tags">
+              <span class="quota-tag" :class="{active:!quotaCatFilter}" @click="quotaCatFilter='';filterQuotaDB()">全部</span>
+              <span class="quota-tag" v-for="c in quotaCategories" :key="c" :class="{active:quotaCatFilter===c}" @click="quotaCatFilter=c;filterQuotaDB()">{{ c }}</span>
+            </div>
+            <el-table :data="paginatedQuotaDB" stripe size="small" max-height="350">
+              <el-table-column prop="quotaCode" label="定额编号" width="130" />
+              <el-table-column prop="quotaName" label="定额名称" min-width="200" />
+              <el-table-column prop="unit" label="单位" width="80" />
+              <el-table-column prop="category" label="分类" width="110">
+                <template #default="scope"><el-tag size="small">{{ scope.row.category }}</el-tag></template>
+              </el-table-column>
+              <el-table-column prop="compositePrice" label="综合单价(元)" width="120" sortable>
+                <template #default="scope"><strong>{{ scope.row.compositePrice.toFixed(2) }}</strong></template>
+              </el-table-column>
+              <el-table-column prop="region" label="适用地区" width="100" />
+              <el-table-column label="操作" width="100">
+                <template #default="scope">
+                  <el-button size="small" type="primary" @click="applyQuotaToPricing(scope.row)">选用</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px">
+              <el-button size="small" :disabled="quotaPage<=1" @click="quotaPage--">上一页</el-button>
+              <span style="font-size:13px;color:var(--text-secondary)">第 {{ quotaPage }} / {{ quotaTotalPages }} 页</span>
+              <el-button size="small" :disabled="quotaPage>=quotaTotalPages" @click="quotaPage++">下一页</el-button>
+              <el-select v-model="quotaPageSize" size="small" style="width:100px" @change="quotaPage=1">
+                <el-option :value="10" label="10条/页" />
+                <el-option :value="20" label="20条/页" />
+                <el-option :value="50" label="50条/页" />
+              </el-select>
+            </div>
+          </div>
+        </div>
+        <!-- Pricing Result -->
+        <div v-if="pricingItems.length" class="card">
+          <div class="card-title">
+            📋 智能组价结果
+            <span style="font-weight:400;font-size:13px;color:var(--text-secondary);margin-left:8px">
+              总造价：<strong style="color:var(--primary)">{{ formatMoney(pricingTotal) }}</strong>
+            </span>
+          </div>
+          <el-table :data="pricingItems" stripe size="small" max-height="500">
+            <el-table-column prop="quotaCode" label="定额编号" width="130" />
+            <el-table-column prop="quotaName" label="定额名称" min-width="180" />
+            <el-table-column prop="unit" label="单位" width="70" />
+            <el-table-column prop="quantity" label="数量" width="100" />
+            <el-table-column label="人工费" width="110">
+              <template #default="scope">{{ scope.row.laborCost.toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="材料费" width="110">
+              <template #default="scope">{{ scope.row.materialCost.toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="机械费" width="110">
+              <template #default="scope">{{ scope.row.machineCost.toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column label="综合单价" width="120" sortable>
+              <template #default="scope"><strong>{{ scope.row.compositePrice.toFixed(2) }}</strong></template>
+            </el-table-column>
+            <el-table-column label="合价" width="130" sortable>
+              <template #default="scope"><strong style="color:var(--primary)">{{ scope.row.totalPrice.toLocaleString() }}</strong></template>
+            </el-table-column>
+            <el-table-column prop="priceSource" label="价格来源" width="100">
+              <template #default="scope"><el-tag size="small" :type="scope.row.priceSource==='市场价'?'warning':'info'">{{ scope.row.priceSource }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="matchScore" label="匹配度" width="90">
+              <template #default="scope">
+                <el-progress :percentage="scope.row.matchScore" :stroke-width="5" :color="scope.row.matchScore>90?'#67c23a':scope.row.matchScore>70?'#e6a23c':'#f56c6c'" />
+              </template>
+            </el-table-column>
+          </el-table>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <el-button @click="exportPricingExcel">📥 导出Excel</el-button>
+            <el-button @click="exportPricingPDF">📄 导出PDF</el-button>
+          </div>
+        </div>
+        <!-- Price Comparison Chart -->
+        <div v-if="pricingItems.length" class="chart-row">
+          <div class="chart-box"><h3>📊 人材机费用构成</h3><div id="chart-cost-breakdown" style="height:300px"></div></div>
+          <div class="chart-box"><h3>📈 市场价格对比</h3><div id="chart-price-compare" style="height:300px"></div></div>
+        </div>
+      </div>
+
+      <!-- ====== LIFECYCLE MANAGEMENT (全生命周期管控) ====== -->
+      <div v-if="currentPage==='lifecycle'" class="fade-in">
+        <div class="page-header">
+          <h2>🔄 全生命周期成本管控</h2>
+          <p>覆盖决策→招投标→施工→竣工四大阶段 · 全过程动态管控</p>
+        </div>
+        <!-- 4 Stage Process -->
+        <div class="process-steps">
+          <div v-for="(s,i) in lifecycleStages" :key="s.key" class="process-step" :class="{active:activeStage===s.key}" @click="activeStage=s.key">
+            <div class="process-step-icon" :style="{background:s.color}">{{ s.icon }}</div>
+            <h4>{{ s.label }}</h4>
+            <p>{{ s.desc }}</p>
+            <el-progress :percentage="s.completion" :stroke-width="4" style="margin-top:8px" />
+          </div>
+        </div>
+        <!-- Stage Detail -->
+        <div class="card">
+          <div class="card-title">{{ activeStageLabel }}</div>
+          <el-table :data="filteredLifecycleItems" stripe size="small" max-height="400">
+            <el-table-column prop="code" label="编号" width="100" />
+            <el-table-column prop="name" label="管控项" min-width="200" />
+            <el-table-column prop="budgetCost" label="预算成本(万元)" width="130" sortable />
+            <el-table-column prop="actualCost" label="实际成本(万元)" width="130">
+              <template #default="scope">
+                <span :style="{color:scope.row.actualCost>scope.row.budgetCost?'#f56c6c':''}">
+                  {{ scope.row.actualCost.toLocaleString() }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="variance" label="偏差(%)" width="100">
+              <template #default="scope">
+                <span :style="{color:Math.abs(scope.row.variance)>10?'#f56c6c':Math.abs(scope.row.variance)>5?'#e6a23c':'#67c23a'}">
+                  {{ scope.row.variance>0?'+':'' }}{{ scope.row.variance }}%
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="scope">
+                <el-tag size="small" :type="scope.row.status==='normal'?'success':scope.row.status==='warning'?'warning':'danger'">
+                  {{ scope.row.status==='normal'?'正常':scope.row.status==='warning'?'预警':'超支' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="suggestion" label="AI优化建议" min-width="200" />
+          </el-table>
+        </div>
+        <!-- Cost Control Chart -->
+        <div class="chart-row">
+          <div class="chart-box"><h3>📈 全生命周期成本曲线</h3><div id="chart-lifecycle-cost" style="height:300px"></div></div>
+          <div class="chart-box"><h3>🎯 预算vs实际对比</h3><div id="chart-budget-actual" style="height:300px"></div></div>
+        </div>
+      </div>
+
+      <!-- ====== RISK WARNING (风险预警) ====== -->
+      <div v-if="currentPage==='risk'" class="fade-in">
+        <div class="page-header">
+          <h2>⚠️ 成本风险实时预警</h2>
+          <p>价格波动监控 · 图纸错漏提示 · 成本超支预警 · 智能风险评级</p>
+        </div>
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#f56c6c">🔴</div>
+            <div class="stat-info"><h3>{{ riskStats.high }}</h3><p>高风险</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#e6a23c">🟡</div>
+            <div class="stat-info"><h3>{{ riskStats.medium }}</h3><p>中风险</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#67c23a">🟢</div>
+            <div class="stat-info"><h3>{{ riskStats.low }}</h3><p>低风险</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#409eff">📋</div>
+            <div class="stat-info"><h3>{{ riskStats.total }}</h3><p>监控项总计</p></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🚨 实时风险列表</div>
+          <el-table :data="riskItems" stripe size="small" max-height="450">
+            <el-table-column prop="time" label="时间" width="160" />
+            <el-table-column prop="project" label="关联项目" width="140" />
+            <el-table-column prop="type" label="风险类型" width="120">
+              <template #default="scope"><el-tag size="small">{{ scope.row.type }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="level" label="等级" width="90">
+              <template #default="scope">
+                <span :class="'risk-'+scope.row.level">{{ scope.row.level==='high'?'🔴 高':scope.row.level==='medium'?'🟡 中':'🟢 低' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="description" label="风险描述" min-width="250" />
+            <el-table-column prop="impact" label="影响金额(万元)" width="130" sortable>
+              <template #default="scope">
+                <span style="color:#f56c6c;font-weight:600">{{ scope.row.impact.toLocaleString() }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="suggestion" label="AI应对建议" min-width="200" />
+            <el-table-column label="操作" width="120">
+              <template #default="scope">
+                <el-button size="small" @click="handleRisk(scope.row)">处理</el-button>
+                <el-button size="small" type="danger" @click="dismissRisk(scope.$index)">忽略</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3>📊 风险趋势（近30天）</h3><div id="chart-risk-trend" style="height:300px"></div></div>
+          <div class="chart-box"><h3>🔍 风险分类占比</h3><div id="chart-risk-pie" style="height:300px"></div></div>
+        </div>
+      </div>
+
+      <!-- ====== SETTLEMENT AUDIT (结算审核) ====== -->
+      <div v-if="currentPage==='settlement'" class="fade-in">
+        <div class="page-header">
+          <h2>✅ 结算资料自动校验</h2>
+          <p>资料完整性核验 · 工程量自动核对 · 核减金额计算 · 结算争议辅助</p>
+        </div>
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="auditProject" placeholder="选择项目" style="width:240px">
+              <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+            </el-select>
+            <el-button type="primary" @click="runAudit" :loading="auditRunning">
+              🔍 {{ auditRunning ? '校验中...' : '开始自动校验' }}
+            </el-button>
+          </div>
+        </div>
+        <!-- Audit Checklist -->
+        <div v-if="auditItems.length" class="card">
+          <div class="card-title">📋 结算资料核验清单</div>
+          <el-table :data="auditItems" stripe size="small" max-height="400">
+            <el-table-column prop="docName" label="资料名称" min-width="200" />
+            <el-table-column prop="required" label="必要性" width="90">
+              <template #default="scope">
+                <el-tag size="small" :type="scope.row.required==='必选'?'danger':'info'">{{ scope.row.required }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="110">
+              <template #default="scope">
+                <el-tag size="small" :type="scope.row.status==='齐全'?'success':scope.row.status==='缺失'?'danger':'warning'">
+                  {{ scope.row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="checkResult" label="核验结果" min-width="250" />
+            <el-table-column prop="reductionAmount" label="核减金额(万元)" width="140" sortable>
+              <template #default="scope">
+                <span v-if="scope.row.reductionAmount>0" style="color:#f56c6c;font-weight:600">
+                  -{{ scope.row.reductionAmount.toFixed(2) }}
+                </span>
+                <span v-else style="color:#67c23a">0.00</span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div style="margin-top:16px;padding:16px;background:var(--hover-bg);border-radius:8px">
+            <strong>📊 核验汇总：</strong>
+            资料完整率 {{ auditCompleteness }}% ·
+            核减总金额 <strong style="color:#f56c6c">{{ auditReductionTotal.toFixed(2) }} 万元</strong> ·
+            争议项 {{ auditDisputeCount }} 项
+            <el-button size="small" style="margin-left:16px" @click="exportAuditExcel">📥 导出核验报告</el-button>
+          </div>
+        </div>
+        <!-- Audit Charts -->
+        <div v-if="auditItems.length" class="chart-row">
+          <div class="chart-box"><h3>📊 核减金额构成</h3><div id="chart-audit-reduction" style="height:300px"></div></div>
+          <div class="chart-box"><h3>📋 资料完整性统计</h3><div id="chart-audit-completeness" style="height:300px"></div></div>
+        </div>
+      </div>
+
+      <!-- ====== CHANGE/VISA MANAGEMENT (变更签证管理) ====== -->
+      <div v-if="currentPage==='changes'" class="fade-in">
+        <div class="page-header">
+          <h2>📝 变更签证管理</h2>
+          <p>变更申请 · 多级审批 · 成本对比 · 超限预警</p>
+        </div>
+        <!-- Summary Stats -->
+        <div class="stat-row">
+          <div class="stat-card" v-for="cs in changeStats" :key="cs.label">
+            <div class="stat-icon" :style="{background:cs.color}">{{ cs.icon }}</div>
+            <div class="stat-info"><h3>{{ cs.value }}</h3><p>{{ cs.label }}</p></div>
+          </div>
+        </div>
+        <!-- Change List -->
+        <div class="card">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="changeProjectFilter" placeholder="筛选项目" style="width:220px" clearable>
+              <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+            </el-select>
+            <el-select v-model="changeStatusFilter" placeholder="审批状态" style="width:140px" clearable>
+              <el-option label="草稿" value="draft" /><el-option label="审批中" value="pending" />
+              <el-option label="已批准" value="approved" /><el-option label="已驳回" value="rejected" />
+            </el-select>
+            <el-button @click="changeProjectFilter='';changeStatusFilter=''">🔍 查询全部</el-button>
+            <div style="flex:1"></div>
+            <el-button type="primary" @click="openChangeDialog()">➕ 新建变更申请</el-button>
+          </div>
+          <el-table :data="filteredChanges" stripe size="small" max-height="450">
+            <el-table-column prop="id" label="编号" width="130" />
+            <el-table-column prop="projectName" label="关联项目" width="160" />
+            <el-table-column prop="title" label="变更标题" min-width="200" />
+            <el-table-column prop="type" label="类型" width="110">
+              <template #default="scope"><el-tag size="small">{{ scope.row.type }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="estimatedAmount" label="预估(万元)" width="110" sortable>
+              <template #default="scope">{{ scope.row.estimatedAmount.toFixed(2) }}</template>
+            </el-table-column>
+            <el-table-column prop="approvedAmount" label="批准(万元)" width="110" sortable>
+              <template #default="scope"><strong :style="{color:scope.row.approvedAmount>scope.row.estimatedAmount?'#f56c6c':''}">{{ scope.row.approvedAmount.toFixed(2) }}</strong></template>
+            </el-table-column>
+            <el-table-column label="审批进度" width="280">
+              <template #default="scope">
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span v-for="(node,ni) in scope.row.approvalFlow" :key="ni" :title="node.role"
+                    style="width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px"
+                    :style="{background:node.status==='approved'?'#67c23a':node.status==='rejected'?'#f56c6c':node.status==='pending'?'#e6a23c':'#909399',color:'#fff'}">
+                    {{ ni+1 }}
+                  </span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="90">
+              <template #default="scope">
+                <el-tag size="small" :type="scope.row.status==='approved'?'success':scope.row.status==='rejected'?'danger':scope.row.status==='pending'?'warning':'info'">
+                  {{ changeStatusLabel(scope.row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="150">
+              <template #default="scope">
+                <el-button size="small" @click="viewChange(scope.row)">详情</el-button>
+                <el-button v-if="scope.row.status==='draft'" size="small" type="danger" @click="deleteChange(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <!-- Change Detail Dialog -->
+        <el-dialog v-model="changeDetailVisible" title="变更详情" width="800px">
+          <template v-if="viewingChange">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="变更编号">{{ viewingChange.id }}</el-descriptions-item>
+              <el-descriptions-item label="关联项目">{{ viewingChange.projectName }}</el-descriptions-item>
+              <el-descriptions-item label="变更类型">{{ viewingChange.type }}</el-descriptions-item>
+              <el-descriptions-item label="变更部位">{{ viewingChange.location }}</el-descriptions-item>
+              <el-descriptions-item label="变更原因" :span="2">{{ viewingChange.reason }}</el-descriptions-item>
+              <el-descriptions-item label="预估金额">{{ viewingChange.estimatedAmount.toFixed(2) }} 万元</el-descriptions-item>
+              <el-descriptions-item label="批准金额">{{ viewingChange.approvedAmount.toFixed(2) }} 万元</el-descriptions-item>
+            </el-descriptions>
+            <!-- Approval Flow -->
+            <h4 style="margin:16px 0 8px">审批流程</h4>
+            <div class="approval-flow">
+              <template v-for="(node,ni) in viewingChange.approvalFlow" :key="ni">
+                <div class="approval-node">
+                  <div class="dot" :style="{background:node.status==='approved'?'#67c23a':node.status==='rejected'?'#f56c6c':node.status==='pending'?'#e6a23c':'#909399'}">
+                    {{ node.status==='approved'?'✓':node.status==='rejected'?'✗':'○' }}
+                  </div>
+                  <div class="label">{{ node.role }}</div>
+                  <div class="status-tag" :style="{background:node.status==='approved'?'rgba(103,194,58,0.15)':node.status==='rejected'?'rgba(245,108,108,0.15)':'rgba(230,162,60,0.15)',color:node.status==='approved'?'#67c23a':node.status==='rejected'?'#f56c6c':'#e6a23c'}">
+                    {{ node.status==='approved'?'已通过':node.status==='rejected'?'已驳回':node.status==='pending'?'待审批':'未开始' }}
+                  </div>
+                </div>
+                <div v-if="ni<viewingChange.approvalFlow.length-1" class="approval-line" :class="{done:node.status==='approved'}"></div>
+              </template>
+            </div>
+            <!-- Before/After Cost Compare -->
+            <h4 style="margin:16px 0 8px">变更前后成本对比</h4>
+            <div class="chart-row">
+              <div class="chart-box"><div id="chart-change-before-after" style="height:200px"></div></div>
+            </div>
+            <div v-if="viewingChange.status==='pending'" style="margin-top:16px;display:flex;gap:8px">
+              <el-button type="success" @click="approveChangeStep(viewingChange)">✅ 当前节点审批通过</el-button>
+              <el-button type="danger" @click="rejectChange(viewingChange)">❌ 驳回</el-button>
+            </div>
+          </template>
+        </el-dialog>
+        <!-- New Change Dialog -->
+        <el-dialog v-model="changeDialogVisible" title="新建变更申请" width="650px">
+          <el-form :model="changeForm" label-width="100px" size="small">
+            <el-form-item label="关联项目" required>
+              <el-select v-model="changeForm.projectId" style="width:100%" @change="onChangeProjectSelect">
+                <el-option v-for="p in allProjects" :key="p.id" :label="p.id+' '+p.name" :value="p.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="变更类型"><el-select v-model="changeForm.type" style="width:100%"><el-option v-for="t in changeTypes" :key="t" :label="t" :value="t" /></el-select></el-form-item>
+            <el-form-item label="变更部位"><el-input v-model="changeForm.location" placeholder="如：地下室基础、3层柱" /></el-form-item>
+            <el-form-item label="变更原因" required><el-input v-model="changeForm.reason" type="textarea" :rows="3" placeholder="请详细描述变更原因..." /></el-form-item>
+            <el-form-item label="预估金额(万元)"><el-input-number v-model="changeForm.estimatedAmount" :min="0" :precision="2" style="width:100%" /></el-form-item>
+            <el-form-item label="关联清单项">
+              <el-select v-model="changeForm.relatedItems" multiple filterable placeholder="选择关联的原合同清单项" style="width:100%">
+                <el-option v-for="qi in quantityItems" :key="qi.code" :label="qi.code+' '+qi.name" :value="qi.code" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="附件"><el-input v-model="changeForm.attachment" placeholder="附件描述（演示）" /></el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="changeDialogVisible=false">取消</el-button>
+            <el-button type="primary" @click="submitChange">提交申请</el-button>
+          </template>
+        </el-dialog>
+        <!-- Over-limit Warning -->
+        <div v-if="overLimitProjects.length" class="card" style="border:2px solid #f56c6c;margin-top:16px">
+          <div class="card-title" style="color:#f56c6c">🚨 变更超限预警</div>
+          <div v-for="op in overLimitProjects" :key="op.id" class="change-card" style="border-left-color:#f56c6c">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <strong>{{ op.name }}</strong>
+                <span style="font-size:13px;color:var(--text-secondary);margin-left:8px">
+                  累计变更 {{ op.totalChanges.toFixed(2) }} 万元 · 占比 {{ op.changeRatio.toFixed(1) }}%
+                </span>
+              </div>
+              <el-tag type="danger">{{ op.changeRatio > 10 ? '🔴 严重超限 (>10%)' : '🟡 超限预警 (>5%)' }}</el-tag>
+            </div>
+            <el-progress :percentage="Math.min(op.changeRatio*10,100)" :color="op.changeRatio>10?'#f56c6c':'#e6a23c'" :stroke-width="8" style="margin-top:8px" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== COST INDICATOR LIBRARY (造价指标库与智能估算) ====== -->
+      <div v-if="currentPage==='indicators'" class="fade-in">
+        <div class="page-header">
+          <h2>📈 造价指标库与智能估算</h2>
+          <p>历史项目指标提取 · 按类型/结构分类 · 智能估算 · 异常标注</p>
+        </div>
+        <!-- Intelligent Estimation -->
+        <div class="card">
+          <div class="card-title">🎯 智能估算（输入参数→AI推荐指标）</div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="estBuildingType" placeholder="建筑类型" style="width:160px">
+              <el-option v-for="t in buildingTypes" :key="t" :label="t" :value="t" />
+            </el-select>
+            <el-select v-model="estStructureType" placeholder="结构形式" style="width:160px">
+              <el-option v-for="t in structureTypes" :key="t" :label="t" :value="t" />
+            </el-select>
+            <el-input-number v-model="estArea" :min="0" placeholder="建筑面积(㎡)" style="width:180px" />
+            <el-input-number v-model="estFloors" :min="1" placeholder="地上层数" style="width:140px" />
+            <el-input-number v-model="estUnderground" :min="0" placeholder="地下层数" style="width:140px" />
+            <el-select v-model="estRegion" placeholder="地区" style="width:140px">
+              <el-option v-for="r in regions" :key="r" :label="r" :value="r" />
+            </el-select>
+            <el-button type="primary" @click="runEstimation" :loading="estRunning">
+              🧠 {{ estRunning ? '估算中...' : '智能估算' }}
+            </el-button>
+          </div>
+          <div v-if="estimationResult" class="estimation-result">
+            <h3 style="margin-bottom:8px">📊 估算结果</h3>
+            <div class="indicator-grid">
+              <div class="indicator-chip">
+                <div class="big-num">{{ estimationResult.costPerSqm.toLocaleString() }}</div>
+                <div class="label">综合单价 (元/㎡)</div>
+                <div class="range">参考区间: {{ estimationResult.costRange }}</div>
+              </div>
+              <div class="indicator-chip">
+                <div class="big-num">{{ (estArea * estimationResult.costPerSqm / 10000).toFixed(0).toLocaleString() }}</div>
+                <div class="label">预估总造价 (万元)</div>
+                <div class="range">含±10%预备费</div>
+              </div>
+              <div class="indicator-chip">
+                <div class="big-num">{{ estimationResult.steelPerSqm }}</div>
+                <div class="label">钢筋含量 (kg/㎡)</div>
+                <div class="range">参考区间: {{ estimationResult.steelRange }}</div>
+              </div>
+              <div class="indicator-chip">
+                <div class="big-num">{{ estimationResult.concretePerSqm }}</div>
+                <div class="label">混凝土含量 (m³/㎡)</div>
+                <div class="range">参考区间: {{ estimationResult.concreteRange }}</div>
+              </div>
+            </div>
+            <div style="margin-top:16px;color:var(--text-secondary);font-size:12px">
+              基于 {{ estimationResult.sampleCount }} 个同类项目数据 · 置信度 {{ estimationResult.confidence }}%
+            </div>
+          </div>
+        </div>
+        <!-- Indicator Database -->
+        <div class="card">
+          <div class="card-title">📚 指标数据库</div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="indBuildingFilter" placeholder="建筑类型" style="width:140px" clearable>
+              <el-option v-for="t in buildingTypes" :key="t" :label="t" :value="t" />
+            </el-select>
+            <el-select v-model="indStructureFilter" placeholder="结构形式" style="width:140px" clearable>
+              <el-option v-for="t in structureTypes" :key="t" :label="t" :value="t" />
+            </el-select>
+            <el-button @click="extractIndicators">🔄 从项目自动提取指标</el-button>
+            <el-button @click="addSampleIndicator">📊 添加行业基准数据</el-button>
+          </div>
+          <el-table :data="filteredIndicators" stripe size="small" max-height="400">
+            <el-table-column prop="projectName" label="项目名称/来源" min-width="180" />
+            <el-table-column prop="buildingType" label="建筑类型" width="100" />
+            <el-table-column prop="structureType" label="结构形式" width="100" />
+            <el-table-column prop="area" label="面积(㎡)" width="110" sortable>
+              <template #default="scope">{{ scope.row.area?.toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column prop="costPerSqm" label="元/㎡" width="110" sortable>
+              <template #default="scope">
+                <span :class="{'risk-high':scope.row.abnormal}">{{ scope.row.costPerSqm?.toLocaleString() }}</span>
+                <el-tag v-if="scope.row.abnormal" size="small" type="danger" style="margin-left:4px">异常</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="steelKgPerSqm" label="钢筋kg/㎡" width="110" sortable />
+            <el-table-column prop="concreteM3PerSqm" label="砼m³/㎡" width="100" sortable />
+            <el-table-column prop="floorCount" label="层数" width="80" />
+            <el-table-column label="操作" width="80">
+              <template #default="scope">
+                <el-button size="small" type="danger" @click="deleteIndicator(scope.$index)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <!-- Indicator Compare Radar -->
+        <div class="chart-row">
+          <div class="chart-box"><h3>🎯 指标对比（本项目 vs 企业标准 vs 行业标准）</h3><div id="chart-indicator-radar" style="height:320px"></div></div>
+          <div class="chart-box"><h3>📊 按建筑类型造价分布</h3><div id="chart-indicator-bar" style="height:320px"></div></div>
+        </div>
+      </div>
+
+      <!-- ====== COLLABORATION (协同工作流) ====== -->
+      <div v-if="currentPage==='collab'" class="fade-in">
+        <div class="page-header">
+          <h2>👥 协同工作</h2>
+          <p>多人协作 · 操作日志 · 版本对比 · 批注留言 · 任务分配</p>
+        </div>
+        <!-- Tabs -->
+        <el-tabs v-model="collabTab" type="border-card">
+          <!-- Task Assignment -->
+          <el-tab-pane label="📋 任务分配" name="tasks">
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+              <el-button type="primary" @click="openTaskDialog()">➕ 新建任务</el-button>
+              <el-select v-model="taskProjectFilter" placeholder="项目筛选" style="width:200px" clearable>
+                <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+              </el-select>
+            </div>
+            <el-table :data="filteredTasks" stripe size="small" max-height="400">
+              <el-table-column prop="title" label="任务名称" min-width="200" />
+              <el-table-column prop="projectName" label="关联项目" width="160" />
+              <el-table-column prop="assignee" label="负责人" width="100" />
+              <el-table-column prop="discipline" label="专业" width="90">
+                <template #default="scope"><el-tag size="small">{{ scope.row.discipline }}</el-tag></template>
+              </el-table-column>
+              <el-table-column prop="priority" label="优先级" width="90">
+                <template #default="scope">
+                  <el-tag size="small" :type="scope.row.priority==='high'?'danger':scope.row.priority==='medium'?'warning':'info'">
+                    {{ scope.row.priority==='high'?'紧急':scope.row.priority==='medium'?'重要':'普通' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="scope">
+                  <el-tag size="small" :type="scope.row.status==='done'?'success':scope.row.status==='doing'?'warning':'info'">
+                    {{ scope.row.status==='done'?'已完成':scope.row.status==='doing'?'进行中':'待开始' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="deadline" label="截止日期" width="120" />
+              <el-table-column label="操作" width="150">
+                <template #default="scope">
+                  <el-button size="small" @click="toggleTaskStatus(scope.row)">
+                    {{ scope.row.status==='done'?'重开':scope.row.status==='doing'?'完成':'开始' }}
+                  </el-button>
+                  <el-button size="small" type="danger" @click="deleteTask(scope.$index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <!-- Task Dialog -->
+            <el-dialog v-model="taskDialogVisible" title="新建任务" width="500px">
+              <el-form :model="taskForm" label-width="80px" size="small">
+                <el-form-item label="任务名称" required><el-input v-model="taskForm.title" /></el-form-item>
+                <el-form-item label="关联项目"><el-select v-model="taskForm.projectId" style="width:100%"><el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" /></el-select></el-form-item>
+                <el-form-item label="负责人"><el-select v-model="taskForm.assignee" style="width:100%"><el-option v-for="u in teamMembers" :key="u" :label="u" :value="u" /></el-select></el-form-item>
+                <el-form-item label="专业"><el-select v-model="taskForm.discipline" style="width:100%"><el-option v-for="d in disciplines" :key="d" :label="d" :value="d" /></el-select></el-form-item>
+                <el-form-item label="优先级"><el-select v-model="taskForm.priority" style="width:100%"><el-option label="紧急" value="high" /><el-option label="重要" value="medium" /><el-option label="普通" value="low" /></el-select></el-form-item>
+                <el-form-item label="截止日期"><el-date-picker v-model="taskForm.deadline" type="date" style="width:100%" /></el-form-item>
+                <el-form-item label="描述"><el-input v-model="taskForm.description" type="textarea" :rows="2" /></el-form-item>
+              </el-form>
+              <template #footer><el-button @click="taskDialogVisible=false">取消</el-button><el-button type="primary" @click="createTask">创建</el-button></template>
+            </el-dialog>
+          </el-tab-pane>
+          <!-- Operation Log -->
+          <el-tab-pane label="📜 操作日志" name="logs">
+            <div style="display:flex;gap:12px;margin-bottom:16px">
+              <el-select v-model="logProjectFilter" placeholder="项目筛选" style="width:200px" clearable>
+                <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+              </el-select>
+              <el-select v-model="logActionFilter" placeholder="操作类型" style="width:140px" clearable>
+                <el-option label="创建" value="create" /><el-option label="编辑" value="edit" />
+                <el-option label="删除" value="delete" /><el-option label="审批" value="approve" />
+              </el-select>
+            </div>
+            <div v-if="filteredLogs.length===0" style="text-align:center;padding:40px;color:var(--text-secondary)">
+              暂无操作日志，执行操作后将自动记录
+            </div>
+            <div v-for="log in filteredLogs.slice(0,50)" :key="log.id" class="log-entry">
+              <div class="log-avatar">{{ log.user?.[0] || '?' }}</div>
+              <div class="log-body">
+                <strong>{{ log.user }}</strong>
+                <span style="margin-left:8px">{{ log.action }}</span>
+                <span style="color:var(--primary);margin-left:4px">{{ log.target }}</span>
+                <div class="log-time">{{ log.time }}</div>
+              </div>
+              <el-tag size="small" :type="log.type==='create'?'success':log.type==='edit'?'warning':log.type==='delete'?'danger':'info'">{{ log.type }}</el-tag>
+            </div>
+          </el-tab-pane>
+          <!-- Version History -->
+          <el-tab-pane label="🔄 版本历史" name="versions">
+            <div style="margin-bottom:16px">
+              <el-select v-model="versionTarget" placeholder="选择对比对象" style="width:280px">
+                <el-option label="工程量清单" value="quantity" />
+                <el-option label="组价结果" value="pricing" />
+              </el-select>
+              <el-button style="margin-left:8px" @click="saveVersion">💾 保存当前版本</el-button>
+            </div>
+            <el-table :data="versionList" stripe size="small" max-height="300">
+              <el-table-column prop="id" label="版本号" width="100" />
+              <el-table-column prop="time" label="保存时间" width="180" />
+              <el-table-column prop="user" label="操作人" width="120" />
+              <el-table-column prop="itemCount" label="数据条数" width="100" />
+              <el-table-column label="操作" width="200">
+                <template #default="scope">
+                  <el-button size="small" @click="previewVersion(scope.row)">查看</el-button>
+                  <el-button size="small" type="warning" @click="restoreVersion(scope.row)">恢复</el-button>
+                  <el-button size="small" type="danger" @click="deleteVersion(scope.$index)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <!-- Diff View -->
+            <div v-if="versionDiff" class="card" style="margin-top:16px">
+              <div class="card-title">📊 版本对比 ({{ versionDiff.v1 }} → {{ versionDiff.v2 }})</div>
+              <div class="diff-container">
+                <div v-for="(line,i) in versionDiff.lines" :key="i" :class="line.type">{{ line.text }}</div>
+              </div>
+            </div>
+          </el-tab-pane>
+          <!-- Comments -->
+          <el-tab-pane label="💬 批注留言" name="comments">
+            <div style="margin-bottom:16px;display:flex;gap:8px">
+              <el-select v-model="commentTarget" placeholder="关联项目/清单" style="width:240px">
+                <el-option v-for="p in allProjects" :key="p.id" :label="'项目: '+p.name" :value="'project:'+p.id" />
+                <el-option v-for="qi in quantityItems.slice(0,20)" :key="qi.code" :label="'清单: '+qi.code" :value="'item:'+qi.code" />
+              </el-select>
+              <el-input v-model="newComment" placeholder="输入批注..." style="flex:1" @keyup.enter="addComment" />
+              <el-button type="primary" @click="addComment">发送</el-button>
+            </div>
+            <div v-if="currentComments.length===0" style="text-align:center;padding:40px;color:var(--text-secondary)">
+              选择关联对象后查看批注
+            </div>
+            <div v-for="(c,i) in currentComments" :key="i" class="comment-item">
+              <div class="log-avatar">{{ c.user?.[0] }}</div>
+              <div style="flex:1">
+                <strong>{{ c.user }}</strong>
+                <span class="log-time">{{ c.time }}</span>
+                <div style="margin-top:2px">{{ c.text }}</div>
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+
+      <!-- ====== REPORT CENTER (报表中心) ====== -->
+      <div v-if="currentPage==='reports'" class="fade-in">
+        <div class="page-header">
+          <h2>📋 报表中心</h2>
+          <p>预置模板 · 自定义字段 · 一键生成 · 数据钻取</p>
+        </div>
+        <!-- Templates -->
+        <div class="card">
+          <div class="card-title">📑 报表模板</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+            <div v-for="rt in reportTemplates" :key="rt.key" class="report-template" :class="{active:selectedReport===rt.key}" @click="selectReport(rt.key)">
+              <div style="font-size:32px;margin-bottom:8px">{{ rt.icon }}</div>
+              <h4>{{ rt.name }}</h4>
+              <p style="font-size:12px;color:var(--text-secondary)">{{ rt.desc }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- Report Builder -->
+        <div v-if="selectedReport" class="card">
+          <div class="card-title">⚙️ 报表配置</div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+            <el-select v-model="reportProject" placeholder="选择项目" style="width:220px">
+              <el-option v-for="p in allProjects" :key="p.id" :label="p.name" :value="p.id" />
+            </el-select>
+            <el-date-picker v-model="reportDateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="width:260px" />
+            <el-button type="primary" @click="generateReport">🔄 生成报表</el-button>
+          </div>
+          <!-- Field Picker -->
+          <div style="margin-bottom:12px">
+            <strong style="font-size:13px">选择报表字段：</strong>
+            <div class="field-picker" style="margin-top:8px">
+              <span v-for="f in availableFields" :key="f.key" class="field-chip" :class="{selected:selectedFields.includes(f.key)}" @click="toggleField(f.key)">{{ f.label }}</span>
+            </div>
+          </div>
+        </div>
+        <!-- Report Preview -->
+        <div v-if="reportGenerated" class="card">
+          <div class="card-title">
+            📄 报表预览
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <el-button size="small" @click="exportReportExcel">📥 导出Excel</el-button>
+              <el-button size="small" type="primary" @click="exportReportWord">📄 导出Word</el-button>
+              <el-button size="small" @click="printReport">🖨️ 打印</el-button>
+            </div>
+          </div>
+          <div class="report-preview" id="report-preview-content">
+            <div style="text-align:center;margin-bottom:24px">
+              <h2 style="margin-bottom:4px">{{ currentReportTitle }}</h2>
+              <p style="color:#909399;font-size:13px">项目：{{ reportProjectName }} | 日期：{{ reportDateLabel }} | 编制：{{ currentUser?.displayName }}</p>
+            </div>
+            <el-table :data="reportTableData" stripe size="small" border>
+              <el-table-column v-for="col in reportColumns" :key="col.key" :prop="col.key" :label="col.label" sortable width="auto" />
+            </el-table>
+            <div style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap">
+              <div v-for="(sum,i) in reportSummary" :key="i" style="flex:1;min-width:150px;text-align:center;padding:12px;background:#f5f7fa;border-radius:8px">
+                <div style="font-size:22px;font-weight:700;color:var(--primary)">{{ sum.value }}</div>
+                <div style="font-size:12px;color:#909399">{{ sum.label }}</div>
+              </div>
+            </div>
+          </div>
+          <!-- Drill-down -->
+          <div v-if="drillDownItem" class="card" style="margin-top:16px;background:var(--hover-bg)">
+            <div class="card-title">🔍 明细钻取：{{ drillDownItem.name }}</div>
+            <el-table :data="drillDownData" stripe size="small" max-height="300">
+              <el-table-column prop="code" label="编码" width="140" />
+              <el-table-column prop="name" label="名称" min-width="200" />
+              <el-table-column prop="quantity" label="数量" width="100" />
+              <el-table-column prop="unitPrice" label="单价(元)" width="110" />
+              <el-table-column prop="totalPrice" label="合价(元)" width="130" sortable />
+            </el-table>
+            <el-button size="small" style="margin-top:8px" @click="drillDownItem=null">收起</el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== SETTINGS ====== -->
+      <div v-if="currentPage==='settings'" class="fade-in">
+        <div class="page-header">
+          <h2>⚙️ 系统设置</h2>
+          <p>个性化配置 · 数据管理 · 账号安全</p>
+        </div>
+        <div class="card">
+          <div class="card-title">🎨 外观设置</div>
+          <div class="setting-row">
+            <div><div class="setting-label">暗黑模式</div><div class="setting-desc">切换深色/浅色主题</div></div>
+            <el-switch v-model="isDark" @change="toggleDark" />
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">💾 数据管理</div>
+          <div class="setting-row">
+            <div><div class="setting-label">本地数据存储</div><div class="setting-desc">当前已存储 {{ storageSize }} 条记录 (localStorage)</div></div>
+            <div style="display:flex;gap:8px">
+              <el-button @click="exportAllData">📥 导出全部数据</el-button>
+              <el-button type="danger" @click="clearAllData">🗑️ 清除本地数据</el-button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">自动保存</div><div class="setting-desc">编辑后自动保存到本地存储</div></div>
+            <el-switch v-model="autoSave" />
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🤖 AI 模型配置</div>
+          <div class="setting-row">
+            <div><div class="setting-label">AI 服务商</div><div class="setting-desc">选择大模型API服务商</div></div>
+            <el-select v-model="aiConfig.provider" style="width:200px" @change="onAIProviderChange">
+              <el-option v-for="p in aiProviders" :key="p.value" :label="p.label" :value="p.value" />
+            </el-select>
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">API 地址</div><div class="setting-desc">OpenAI兼容API端点</div></div>
+            <el-input v-model="aiConfig.endpoint" style="width:400px" placeholder="https://api.deepseek.com/v1" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">API Key</div><div class="setting-desc">您的API密钥（仅存储在本地浏览器）</div></div>
+            <el-input v-model="aiConfig.apiKey" type="password" show-password style="width:400px" placeholder="sk-..." />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">模型名称</div><div class="setting-desc">如 deepseek-chat, qwen-plus</div></div>
+            <el-input v-model="aiConfig.model" style="width:300px" placeholder="deepseek-chat" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">温度 (Temperature)</div><div class="setting-desc">0=精确，1=创意</div></div>
+            <el-slider v-model="aiConfig.temperature" :min="0" :max="1" :step="0.1" style="width:200px" show-input />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">最大Token</div></div>
+            <el-input-number v-model="aiConfig.maxTokens" :min="256" :max="8192" :step="256" style="width:160px" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">Agent专用模型</div><div class="setting-desc">算量/组价/风险/审核Agent使用（空=默认模型）</div></div>
+            <el-input v-model="aiConfig.agentModel" style="width:300px" placeholder="如 deepseek-reasoner" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">辩论室模型</div><div class="setting-desc">多Agent辩论专用（推荐高推理能力模型）</div></div>
+            <el-input v-model="aiConfig.debateModel" style="width:300px" placeholder="如 deepseek-reasoner" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">视觉模型</div><div class="setting-desc">图纸/图片识别使用（需Vision能力，如 gpt-4o）</div></div>
+            <el-input v-model="aiConfig.visionModel" style="width:300px" placeholder="如 qwen-vl-max, gpt-4o" />
+          </div>
+          <div class="setting-row">
+            <div><div class="setting-label">价格搜索模型</div><div class="setting-desc">市场价查询/对比专用</div></div>
+            <el-input v-model="aiConfig.priceModel" style="width:300px" placeholder="如 deepseek-chat" />
+          </div>
+          <el-button type="primary" @click="saveAIConfig" style="margin-top:8px">💾 保存配置</el-button>
+          <el-button @click="testAIConnection" style="margin-top:8px;margin-left:8px" :loading="aiTesting">🔌 测试连接</el-button>
+          <div v-if="aiTestResult" style="margin-top:8px">
+            <el-tag :type="aiTestResult.ok?'success':'danger'">{{ aiTestResult.msg }}</el-tag>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">👤 账号信息</div>
+          <el-descriptions :column="2" border size="small">
+            <el-descriptions-item label="用户名">{{ currentUser?.username }}</el-descriptions-item>
+            <el-descriptions-item label="显示名称">{{ currentUser?.displayName }}</el-descriptions-item>
+            <el-descriptions-item label="角色">造价工程师</el-descriptions-item>
+            <el-descriptions-item label="登录时间">{{ loginTime }}</el-descriptions-item>
+          </el-descriptions>
+          <el-button type="primary" style="margin-top:16px" @click="changePasswordDialog=true">🔒 修改密码</el-button>
+        </div>
+        <!-- Change Password Dialog -->
+        <el-dialog v-model="changePasswordDialog" title="修改密码" width="420px">
+          <el-form :model="pwdForm" label-width="80px">
+            <el-form-item label="旧密码"><el-input v-model="pwdForm.oldPwd" type="password" show-password /></el-form-item>
+            <el-form-item label="新密码"><el-input v-model="pwdForm.newPwd" type="password" show-password /></el-form-item>
+            <el-form-item label="确认密码"><el-input v-model="pwdForm.confirmPwd" type="password" show-password /></el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="changePasswordDialog=false">取消</el-button>
+            <el-button type="primary" @click="doChangePassword">确认修改</el-button>
+          </template>
+        </el-dialog>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Application Scripts (dependency order) -->
+<script src="js/db.js?t=20240625"></script>
+<script src="js/utils.js?t=20240625"></script>
+<script src="js/agents.js?t=20240625"></script>
+<script src="js/store.js?t=20240625"></script>
+<script src="js/modules/auth.js?t=20240625"></script>
+<script src="js/modules/dashboard.js?t=20240625"></script>
+<script src="js/modules/projects.js?t=20240625"></script>
+<script src="js/modules/upload.js?t=20240625"></script>
+<script src="js/modules/imports.js?t=20240625"></script>
+<script src="js/modules/quantity.js?t=20240625"></script>
+<script src="js/modules/pricing.js?t=20240625"></script>
+<script src="js/modules/lifecycle.js?t=20240625"></script>
+<script src="js/modules/risk.js?t=20240625"></script>
+<script src="js/modules/settlement.js?t=20240625"></script>
+<script src="js/modules/changes.js?t=20240625"></script>
+<script src="js/modules/indicators.js?t=20240625"></script>
+<script src="js/modules/collab.js?t=20240625"></script>
+<script src="js/modules/reports.js?t=20240625"></script>
+<script src="js/modules/settings.js?t=20240625"></script>
+<script src="js/modules/debate.js?t=20240625"></script>
+<script src="js/modules/wargame.js?t=20240625"></script>
+<script src="js/modules/patrol.js?t=20240625"></script>
+<script src="js/modules/negotiation.js?t=20240625"></script>
+<script src="js/modules/memory.js?t=20240625"></script>
+<script src="js/app.js?t=20240625"></script>
+</body>
+</html>
