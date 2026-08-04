@@ -40,7 +40,7 @@ install.php
 *.pptx
 *.jpg
 *.jpeg
-*.png
+# *.png  # screenshots 需提交 PNG，已在此脚本工作区忽略
 *.gif
 *.mp4
 *.mp3
