@@ -47,3 +47,8 @@ install.php
 *.zip
 *.rar
 *.bak*
+*.bak.*
+storage/payment.key
+.git/
+runtime/
+storage/logs/

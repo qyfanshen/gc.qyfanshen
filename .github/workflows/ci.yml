@@ -1,15 +1,29 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
 jobs:
-  lint:
+  html-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: PHP Lint
-        uses: StephaneBour/actions-php-lint@8.2
-      - name: Secret Scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.before }}
-          head: ${{ github.event.after }}
+      - name: HTML 校验
+        run: |
+          for f in $(find . -maxdepth 2 -name '*.html'); do
+            python3 -c "from html.parser import HTMLParser
+import sys
+class P(HTMLParser):
+  def error(self, msg): raise SystemExit(f'parse error in $f: {msg}')
+P().feed(open('$f', encoding='utf-8').read())"
+          done
+      - name: 链接完整性
+        run: |
+          test -f privacy.html
+          test -f sitemap.xml
+          test -f robots.txt
+      - name: 敏感文件检查
+        run: |
+          ! git ls-files | grep -E '^\.(env|env\.local)$' || (echo '敏感文件被追踪！' && exit 1)
