@@ -34,10 +34,6 @@
 
 ![图表分析流程（大视口）](screenshots/flow-charts.png)
 
-### 移动端响应式（390×844）
-
-![移动端响应式（390×844）](screenshots/mobile-home.png)
-
 ---
 
 ## 快速开始
@@ -109,7 +105,43 @@ gc.qyfanshen.com/
 
 ## 架构说明
 
-详见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+## 概述
+
+- **项目**：智慧造价 · AI 工程造价智能管理平台
+- **类型**：静态落地站（附 CAD 素材）
+- **技术栈**：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache · DWG/DXF assets
+
+## 模块划分
+
+
+
+
+
+
+
+
+
+## 数据流
+
+```
+[Browser]
+   │
+   ├─── 静态资源（Nginx / CDN）
+   │
+
+
+
+   │
+   └─── /admin/*（如适用）
+```
+
+## 安全设计
+
+- HTTPS 强制（301 跳转）
+- 安全响应头：CSP / X-Frame-Options / Referrer-Policy / Permissions-Policy
+- 敏感文件（`.env`、`*.bak.*`、`storage/`、`.user.ini`）通过 `.gitignore` + Nginx deny 双重保护
+- 接口限流（PHP 站 `api/rate_limit.php`）
+- CSRF token 校验（PHP 站 `includes/csrf.php`）
 
 ## 开发指南
 
@@ -119,7 +151,95 @@ gc.qyfanshen.com/
 
 ## 部署
 
-生产部署步骤详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)，覆盖 Nginx、Apache、Docker、共享主机等方案。
+## 生产部署
+
+### 1. Nginx 站点配置（推荐）
+
+```nginx
+server {
+    listen 80;
+    server_name gc.qyfanshen.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name gc.qyfanshen.com;
+
+    ssl_certificate     /etc/nginx/ssl/smartgc.crt;
+    ssl_certificate_key /etc/nginx/ssl/smartgc.key;
+
+    root /var/www/gc.qyfanshen.com;
+    index index.html index.php;
+
+    # 安全头
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+    # 静态资源缓存
+    location ~* \.(css|js|jpg|jpeg|png|gif|svg|woff2?)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, immutable";
+    }
+
+    
+
+    # 禁止访问敏感文件
+    location ~ /(\.env|\.user\.ini|\.htaccess|\.bak\.|composer\.json|composer\.lock|package\.json|\.git) {
+        deny all;
+        return 404;
+    }
+}
+```
+
+### 2. Apache `.htaccess`
+
+```apache
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<FilesMatch "\.(env|user\.ini|htaccess|bak\.|gitignore)$">
+    Require all denied
+</FilesMatch>
+```
+
+### 3. Docker（仅 Next.js）
+
+```dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine
+WORKDIR /app
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/package*.json ./
+RUN npm ci --omit=dev
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+### 4. 部署后检查清单
+
+- [ ] HTTPS 已生效（浏览器锁图标）
+- [ ] `https://https://gc.qyfanshen.com/.env` 返回 404
+- [ ] 安全响应头可在 https://securityheaders.com 验证为 A 或 A+
+- [ ] sitemap.xml 可访问
+- [ ] robots.txt 可访问
+- [ ] 隐私页 `privacy.html` 可访问
 
 ## 贡献
 
@@ -127,7 +247,19 @@ gc.qyfanshen.com/
 
 ## 许可证
 
-[MIT](LICENSE) — 详见 LICENSE 文件。
+本项目基于 **MIT 许可证** 开源。
+
+**允许：**
+- ✅ 商业使用
+- ✅ 修改
+- ✅ 分发
+- ✅ 再授权
+- ✅ 私人使用
+
+**条件：**
+- 📄 在软件副本中必须包含原始版权声明和许可证声明
+
+**完整条款：** 详见 [LICENSE](LICENSE) 文件。
 
 ## 致谢
 
@@ -138,3 +270,13 @@ gc.qyfanshen.com/
 
 - 问题反馈：请使用仓库内的 issue 模板
 - 站点域名：https://gc.qyfanshen.com
+
+## 联系我们
+
+扫码添加企业微信，获取技术支持、商务咨询或合作洽谈：
+
+![企业微信二维码](screenshots/wechat-qrcode.png)
+
+其他联系方式：
+- 集团主站：<https://qyfanshen.com>
+- 问题反馈：请使用仓库内的 issue 模板

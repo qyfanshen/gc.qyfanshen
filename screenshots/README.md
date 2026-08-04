@@ -16,11 +16,11 @@
 
 > 图表分析流程（大视口）
 
-### `mobile-home.png`
+### `wechat-qrcode.png`
 
-![移动端响应式（390×844）](mobile-home.png)
+![wechat-qrcode.png](wechat-qrcode.png)
 
-> 移动端响应式（390×844）
+> wechat-qrcode.png
 
 ## 如何重新生成截图
 
