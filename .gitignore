@@ -49,6 +49,8 @@ install.php
 *.bak*
 *.bak.*
 storage/payment.key
+*.tar.gz
+*.tgz
 .git/
 runtime/
 storage/logs/
