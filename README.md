@@ -3,6 +3,15 @@
 > AI-Driven Engineering Cost Estimation & Management
 
 ![preview](screenshots/preview.png)
+<p align="center">
+  <a href="https://github.com/qyfanshen/gc.qyfanshen"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="https://github.com/qyfanshen/gc.qyfanshen/actions"><img src="https://img.shields.io/github/actions/workflow/status/qyfanshen/gc.qyfanshen/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://img.shields.io/github/languages/code-size/qyfanshen/gc.qyfanshen"><img src="https://img.shields.io/github/languages/code-size/qyfanshen/gc.qyfanshen" alt="Code size"></a>
+  <a href="https://github.com/qyfanshen/gc.qyfanshen/issues"><img src="https://img.shields.io/github/issues/qyfanshen/gc.qyfanshen" alt="Issues"></a>
+  <a href="https://github.com/qyfanshen/gc.qyfanshen/stargazers"><img src="https://img.shields.io/github/stars/qyfanshen/gc.qyfanshen?style=social" alt="Stars"></a>
+</p>
+
+---
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -51,9 +60,6 @@ Real screenshots captured via local server + headless Edge:
 git clone https://gitee.com/qyfanshen/gc.qyfanshen.git
 cd gc.qyfanshen.com
 
-# (PHP sites only) copy the env template and fill in your values
-cp .env.example .env
-# edit .env
 ```
 
 ### Local Preview
@@ -71,7 +77,6 @@ Then open http://localhost:8080
 ## Usage Guide
 
 1. Configure your environment (`.env` for PHP, deploy config for static).
-2. For PHP sites: import the database schema and update `config/app.php` (or `api/db.php`).
 3. For static sites: deploy the directory directly to Nginx / CDN.
 4. Visit the homepage and verify the landing page renders.
 5. (If applicable) login to `/admin/` and review the data.
@@ -212,34 +217,22 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 </FilesMatch>
 ```
 
-### 3. Docker（仅 Next.js）
-
-```dockerfile
-FROM node:22-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:22-alpine
-WORKDIR /app
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/package*.json ./
-RUN npm ci --omit=dev
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
 ### 4. 部署后检查清单
 
 - [ ] HTTPS 已生效（浏览器锁图标）
-- [ ] `https://https://gc.qyfanshen.com/.env` 返回 404
+- [ ] `https://gc.qyfanshen.com/.env` 返回 404
 - [ ] 安全响应头可在 https://securityheaders.com 验证为 A 或 A+
 - [ ] sitemap.xml 可访问
 - [ ] robots.txt 可访问
 - [ ] 隐私页 `privacy.html` 可访问
+
+## Code of Conduct
+
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) — be kind and respectful.
+
+## Security
+
+Found a vulnerability? Read the [Security Policy](SECURITY.md) before reporting.
 
 ## Contributing
 
@@ -280,3 +273,9 @@ Scan the QR code below to add our enterprise WeChat for technical support and bu
 Or reach us at:
 - Website: <https://qyfanshen.com>
 - Issues: please use the in-repo issue templates
+
+---
+
+**Copyright © 2026 [qyfanshen](https://github.com/qyfanshen). All rights reserved.**
+
+Licensed under the [MIT License](LICENSE).

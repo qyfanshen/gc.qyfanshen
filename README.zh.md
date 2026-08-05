@@ -3,6 +3,15 @@
 > AI 驱动的工程造价与项目成本管理
 
 ![预览](screenshots/preview.png)
+<p align="center">
+  <a href="https://github.com/qyfanshen/gc.qyfanshen"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="许可证"></a>
+  <a href="https://github.com/qyfanshen/gc.qyfanshen/actions"><img src="https://img.shields.io/github/actions/workflow/status/qyfanshen/gc.qyfanshen/ci.yml?branch=master&label=CI" alt="CI"></a>
+  <a href="https://img.shields.io/github/languages/code-size/qyfanshen/gc.qyfanshen"><img src="https://img.shields.io/github/languages/code-size/qyfanshen/gc.qyfanshen" alt="代码体积"></a>
+  <a href="https://github.com/qyfanshen/gc.qyfanshen/issues"><img src="https://img.shields.io/github/issues/qyfanshen/gc.qyfanshen" alt="Issues"></a>
+  <a href="https://github.com/qyfanshen/gc.qyfanshen/stargazers"><img src="https://img.shields.io/github/stars/qyfanshen/gc.qyfanshen?style=social" alt="Stars"></a>
+</p>
+
+---
 
 [English](README.md) | [中文](README.zh.md)
 
@@ -71,7 +80,6 @@ php -S 127.0.0.1:8080 -t .
 ## 使用指南
 
 1. 配置环境（PHP 站填写 `.env`，静态站配置部署参数）
-2. PHP 站：导入数据库结构，修改 `config/app.php` 或 `api/db.php`
 3. 静态站：直接将目录部署到 Nginx / CDN
 4. 访问首页，确认落地页正常渲染
 5. （如适用）登录 `/admin/` 检查数据
@@ -212,34 +220,22 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 </FilesMatch>
 ```
 
-### 3. Docker（仅 Next.js）
-
-```dockerfile
-FROM node:22-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:22-alpine
-WORKDIR /app
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/package*.json ./
-RUN npm ci --omit=dev
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
 ### 4. 部署后检查清单
 
 - [ ] HTTPS 已生效（浏览器锁图标）
-- [ ] `https://https://gc.qyfanshen.com/.env` 返回 404
+- [ ] `https://gc.qyfanshen.com/.env` 返回 404
 - [ ] 安全响应头可在 https://securityheaders.com 验证为 A 或 A+
 - [ ] sitemap.xml 可访问
 - [ ] robots.txt 可访问
 - [ ] 隐私页 `privacy.html` 可访问
+
+## 行为准则
+
+请阅读我们的[行为准则](CODE_OF_CONDUCT.md)——友善待人，互相尊重。
+
+## 安全
+
+发现漏洞？请先阅读[安全政策](SECURITY.md)再报告。
 
 ## 贡献
 
@@ -280,3 +276,9 @@ CMD ["npm", "start"]
 其他联系方式：
 - 集团主站：<https://qyfanshen.com>
 - 问题反馈：请使用仓库内的 issue 模板
+
+---
+
+**版权所有 © 2026 [qyfanshen](https://github.com/qyfanshen)。保留所有权利。**
+
+基于 [MIT 许可证](LICENSE) 开源。

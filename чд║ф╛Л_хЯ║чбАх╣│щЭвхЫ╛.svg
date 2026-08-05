@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" font-family="sans-serif">
+  <rect width="800" height="600" fill="#fff"/>
+  <!-- Title Block -->
+  <rect x="550" y="10" width="240" height="100" fill="none" stroke="#000" stroke-width="2"/>
+  <text x="670" y="35" text-anchor="middle" font-size="14" font-weight="bold">滨江商务中心1#楼</text>
+  <text x="670" y="55" text-anchor="middle" font-size="11">基础平面图 (1:100)</text>
+  <text x="670" y="72" text-anchor="middle" font-size="10">设计: 华东建筑设计院</text>
+  <text x="670" y="88" text-anchor="middle" font-size="10">图号: JG-01 | 2024.03</text>
+  <!-- Grid Lines -->
+  <g stroke="#ccc" stroke-width="0.5">
+    <line x1="50" y1="130" x2="750" y2="130"/><text x="30" y="135" font-size="10">A</text>
+    <line x1="50" y1="230" x2="750" y2="230"/><text x="30" y="235" font-size="10">B</text>
+    <line x1="50" y1="330" x2="750" y2="330"/><text x="30" y="335" font-size="10">C</text>
+    <line x1="50" y1="430" x2="750" y2="430"/><text x="30" y="435" font-size="10">D</text>
+    <line x1="50" y1="530" x2="750" y2="530"/><text x="30" y="535" font-size="10">E</text>
+    <line x1="120" y1="120" x2="120" y2="550"/><text x="115" y="120" font-size="10">1</text>
+    <line x1="240" y1="120" x2="240" y2="550"/><text x="235" y="120" font-size="10">2</text>
+    <line x1="360" y1="120" x2="360" y2="550"/><text x="355" y="120" font-size="10">3</text>
+    <line x1="480" y1="120" x2="480" y2="550"/><text x="475" y="120" font-size="10">4</text>
+    <line x1="600" y1="120" x2="600" y2="550"/><text x="595" y="120" font-size="10">5</text>
+    <line x1="720" y1="120" x2="720" y2="550"/><text x="715" y="120" font-size="10">6</text>
+  </g>
+  <!-- Foundation Footings (独立基础) -->
+  <g fill="#d4e6f1" stroke="#2980b9" stroke-width="2">
+    <rect x="130" y="240" width="100" height="80" rx="2"/><text x="180" y="285" text-anchor="middle" font-size="11">J-1</text><text x="180" y="300" text-anchor="middle" font-size="9">2400×2000</text>
+    <rect x="250" y="240" width="100" height="80" rx="2"/><text x="300" y="285" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="370" y="240" width="100" height="80" rx="2"/><text x="420" y="285" text-anchor="middle" font-size="11">J-2</text><text x="420" y="300" text-anchor="middle" font-size="9">2800×2400</text>
+    <rect x="490" y="240" width="100" height="80" rx="2"/><text x="540" y="285" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="610" y="240" width="100" height="80" rx="2"/><text x="660" y="285" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="130" y="340" width="100" height="80" rx="2"/><text x="180" y="385" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="250" y="340" width="100" height="80" rx="2"/><text x="300" y="385" text-anchor="middle" font-size="11">J-3</text><text x="300" y="400" text-anchor="middle" font-size="9">3200×2800</text>
+    <rect x="370" y="340" width="100" height="80" rx="2"/><text x="420" y="385" text-anchor="middle" font-size="11">J-2</text>
+    <rect x="490" y="340" width="100" height="80" rx="2"/><text x="540" y="385" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="610" y="340" width="100" height="80" rx="2"/><text x="660" y="385" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="130" y="440" width="100" height="80" rx="2"/><text x="180" y="485" text-anchor="middle" font-size="11">J-1</text>
+    <rect x="610" y="440" width="100" height="80" rx="2"/><text x="660" y="485" text-anchor="middle" font-size="11">J-1</text>
+    <!-- Elevator Pit -->
+    <rect x="340" y="430" width="120" height="100" fill="#fadbd8" stroke="#e74c3c" stroke-width="2.5"/><text x="400" y="485" text-anchor="middle" font-size="12" font-weight="bold">电梯坑</text><text x="400" y="502" text-anchor="middle" font-size="10">-2.500m</text>
+  </g>
+  <!-- Column Markers -->
+  <g fill="#1a5276" font-size="10" text-anchor="middle">
+    <text x="155" y="235">KZ1 600×600</text><text x="275" y="235">KZ1</text>
+    <text x="395" y="235">KZ2 700×700</text><text x="515" y="235">KZ1</text>
+    <text x="635" y="235">KZ1</text>
+    <text x="155" y="335">KZ1</text><text x="275" y="335">KZ3 800×800</text>
+    <text x="395" y="335">KZ2</text><text x="515" y="335">KZ1</text>
+    <text x="635" y="335">KZ1</text>
+  </g>
+  <!-- Dimension Lines -->
+  <g stroke="#e74c3c" stroke-width="1" fill="none">
+    <line x1="130" y1="520" x2="730" y2="520"/>
+    <line x1="130" y1="515" x2="130" y2="525"/><line x1="730" y1="515" x2="730" y2="525"/>
+  </g>
+  <text x="430" y="540" text-anchor="middle" font-size="11" fill="#e74c3c">总长 48000mm (48m)</text>
+  <g stroke="#e74c3c" stroke-width="1" fill="none">
+    <line x1="745" y1="240" x2="745" y2="520"/>
+    <line x1="740" y1="240" x2="750" y2="240"/><line x1="740" y1="520" x2="750" y2="520"/>
+  </g>
+  <text x="765" y="385" font-size="11" fill="#e74c3c" transform="rotate(90,765,385)">总宽 18000mm (18m)</text>
+  <!-- Notes -->
+  <g font-size="10">
+    <text x="50" y="575">注：1. 基础采用C30混凝土，HRB400钢筋</text>
+    <text x="50" y="592">2. 基底标高-3.500m，持力层为中风化泥岩</text>
+    <text x="400" y="575">3. 电梯坑底板厚600mm，侧壁厚300mm</text>
+    <text x="400" y="592">4. J-1/J-2/J-3分别对应不同柱荷载，详见基础详图</text>
+  </g>
+</svg>
