@@ -51,6 +51,13 @@ install.php
 storage/payment.key
 *.tar.gz
 *.tgz
+*.svg
+企业.jpg
+企业微信.jpg
+工程.jpg
+官网主页.jpg
+医药.jpg
+.well-known/
 .git/
 runtime/
 storage/logs/
