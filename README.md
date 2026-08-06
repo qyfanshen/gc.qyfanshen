@@ -13,6 +13,8 @@
 
 ---
 
+**SmartGC** brings AI-assisted estimation, quantity takeoff and project cost control to engineering teams — a login-protected console with bundled templates and assets.
+
 [English](README.md) | [中文](README.zh.md)
 
 ## Key Scenarios
@@ -25,14 +27,14 @@
 
 ### Core Features
 - AI-assisted cost estimation workflow demonstration
-- Bundled engineering assets: DWG/DXF samples, PPTX templates
+- Bundled engineering assets: PPTX templates
 - SEO-ready: sitemap.xml, robots.txt, semantic markup
 - Privacy & legal pages included
 - MIT licensed
 - Static deploy with Nginx / Apache
 
 ### Technical Features
-- Modern web stack: HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache · DWG/DXF assets
+- Modern web stack: HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache
 - Privacy-first: HTTPS enforced, security headers, sensitive-file isolation
 - SEO-ready: `sitemap.xml`, `robots.txt`, semantic markup
 - License: MIT
@@ -102,7 +104,7 @@ gc.qyfanshen.com/
 
 - **项目**：智慧造价 · AI 工程造价智能管理平台
 - **类型**：静态落地站（附 CAD 素材）
-- **技术栈**：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache · DWG/DXF assets
+- **技术栈**：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache
 
 ## 模块划分
 

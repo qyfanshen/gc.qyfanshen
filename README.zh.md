@@ -13,6 +13,8 @@
 
 ---
 
+**智慧造价** 为工程造价团队提供 AI 辅助估算、工程量计算与项目成本管控，登录保护的控制台并附带模板与工程素材。
+
 [English](README.md) | [中文](README.zh.md)
 
 ## 核心使用场景
@@ -25,14 +27,14 @@
 
 ### 核心功能
 - AI 辅助造价估算流程演示
-- 附带工程素材：DWG/DXF 示例、PPTX 模板
+- 附带工程素材：PPTX 模板
 - SEO 就绪：sitemap.xml、robots.txt、语义化标签
 - 内置隐私与法律页面
 - MIT 协议
 - Nginx / Apache 静态部署
 
 ### 技术特性
-- 现代化技术栈：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache · DWG/DXF assets
+- 现代化技术栈：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache
 - 隐私与安全：HTTPS 强制、安全响应头、敏感文件隔离
 - SEO 就绪：`sitemap.xml`、`robots.txt`、语义化标签
 - 许可证：MIT
@@ -102,7 +104,7 @@ gc.qyfanshen.com/
 
 - **项目**：智慧造价 · AI 工程造价智能管理平台
 - **类型**：静态落地站（附 CAD 素材）
-- **技术栈**：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache · DWG/DXF assets
+- **技术栈**：HTML5 · CSS3 · Vanilla JavaScript · Nginx/Apache
 
 ## 模块划分
 
