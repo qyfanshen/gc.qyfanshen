@@ -2,6 +2,8 @@
 
 > AI 驱动的工程造价与项目成本管理
 
+> 🚀 **[在线演示](https://gc.qyfanshen.com)** · 📚 **[文档](docs/)** · 📋 **[快速开始](docs/QUICKSTART.md)** · 🐛 **[反馈问题](https://github.com/qyfanshen/gc.qyfanshen/issues)** · ⭐ **[Star](https://github.com/qyfanshen/gc.qyfanshen)**
+
 ![预览](screenshots/preview.png)
 <p align="center">
   <a href="https://github.com/qyfanshen/gc.qyfanshen"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="许可证"></a>

@@ -2,6 +2,8 @@
 
 > AI-Driven Engineering Cost Estimation & Management
 
+> 🚀 **[Live Demo](https://gc.qyfanshen.com)** · 📚 **[Docs](docs/)** · 📋 **[Quick Start](docs/QUICKSTART.md)** · 🐛 **[Report Bug](https://github.com/qyfanshen/gc.qyfanshen/issues)** · ⭐ **[Star](https://github.com/qyfanshen/gc.qyfanshen)**
+
 ![preview](screenshots/preview.png)
 <p align="center">
   <a href="https://github.com/qyfanshen/gc.qyfanshen"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
