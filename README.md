@@ -57,6 +57,10 @@ Real screenshots captured after signing in:
 
 ## Quick Start
 
+> **Requirements**: Python 3.8+ (use `python` on Windows, `python3` on Linux/macOS)
+>
+> **Windows note**: if `git clone` fails with `unable to checkout working tree`, run `git config --global core.autocrlf false` first.
+
 Three commands to get started:
 
 ```bash
@@ -66,6 +70,14 @@ python3 -m http.server 8080   # open http://localhost:8080
 ```
 
 > Full steps (Nginx, env vars, production) in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+## Troubleshooting
+
+- **`git clone` fails with `unable to checkout working tree`**: Windows line-ending issue — run `git config --global core.autocrlf false` and clone again.
+- **`python3` is not recognized**: on Windows use `python -m http.server 8080` (or `py -m http.server 8080`).
+- **Port 8080 is already in use**: use another port, e.g. `python -m http.server 8000`, then open `http://localhost:8000`.
+- **Page returns 404**: make sure you `cd` into the project folder (the one containing `index.html`) before starting the server.
+- **Cannot reach localhost**: allow Python through the firewall for local listening, or start with `--bind 0.0.0.0`.
+
 ## Usage Guide
 
 1. Configure your environment (`.env` for PHP, deploy config for static).

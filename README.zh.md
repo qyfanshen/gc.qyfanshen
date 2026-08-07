@@ -57,6 +57,10 @@
 
 ## 快速部署
 
+> **环境要求**：Python 3.8+（Windows 使用 `python`，Linux/macOS 使用 `python3`）
+>
+> **Windows 提示**：如 `git clone` 报 `unable to checkout working tree`，先执行 `git config --global core.autocrlf false` 再克隆。
+
 三行命令即可启动：
 
 ```bash
@@ -66,6 +70,14 @@ python3 -m http.server 8080   # open http://localhost:8080
 ```
 
 > 完整步骤（Nginx、环境变量、生产部署）见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+## 常见问题（Troubleshooting）
+
+- **`git clone` 报 `unable to checkout working tree`**：Windows 换行符兼容问题，先执行 `git config --global core.autocrlf false` 再克隆。
+- **`python3` 不是内部或外部命令**：Windows 使用 `python -m http.server 8080`（或 `py -m http.server 8080`）。
+- **端口 8080 被占用**：换端口，如 `python -m http.server 8000`，然后访问 `http://localhost:8000`。
+- **页面显示 404**：确认已进入项目目录（`cd` 到含 `index.html` 的文件夹）再启动服务。
+- **浏览器打不开 localhost**：确认防火墙允许 Python 监听本地端口，或换用 `--bind 0.0.0.0`。
+
 ## 使用指南
 
 1. 配置环境（PHP 站填写 `.env`，静态站配置部署参数）
