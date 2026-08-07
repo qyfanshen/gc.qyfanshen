@@ -78,6 +78,12 @@ python3 -m http.server 8080   # open http://localhost:8080
 - **Page returns 404**: make sure you `cd` into the project folder (the one containing `index.html`) before starting the server.
 - **Cannot reach localhost**: allow Python through the firewall for local listening, or start with `--bind 0.0.0.0`.
 
+## Demo Account
+
+- **Demo account**: `admin` / `123456` (auto-registers on first login)
+- Entry: click the "Enter System" button at the top of the homepage
+- After sign-in you can explore the dashboard and AI cost assistant
+
 ## Usage Guide
 
 1. Configure your environment (`.env` for PHP, deploy config for static).
